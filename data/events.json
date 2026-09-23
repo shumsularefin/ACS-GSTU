@@ -1,0 +1,35 @@
+[
+  {
+    "id": "green-and-clean",
+    "title": "Green and Clean Today: Spread Public Awareness",
+    "date": "2024-06-05",
+    "category": "sustainability",
+    "image": "images/worldenviromentday.png",
+    "description": "A public awareness program dedicated to promoting environmental sustainability and responsible waste management.",
+    "sourceUrl": "https://www.facebook.com/acs.bsmrstu/videos/473777338666594/"
+  },
+  {
+    "id": "chapter-inauguration",
+    "title": "ACS Student Chapter at BSMRSTU: Expectations, Aims, Prospects",
+    "date": "2024-05-23",
+    "category": "development",
+    "image": "images/Asset 40.png",
+    "description": "The ACS Student Chapter, BSMRSTU inaugural event to explore our expectations, aims, and the exciting prospects for chemistry enthusiasts at BSMRSTU. Connect with fellow students and learn about upcoming opportunities to fuel your passion for chemistry!"
+  },
+  {
+    "id": "membership-online",
+    "title": "Membership Outreach Online Webinar",
+    "date": "2024-05-18",
+    "category": "outreach",
+    "image": "images/Asset 42.png",
+    "description": "Learn about the benefits of joining the ACS Student Chapter, BSMRSTU during our online webinar. Discover resources, networking events, and skill-building workshops tailored for chemistry enthusiasts. Connect with students, faculty, and alumni who share your passion!"
+  },
+  {
+    "id": "membership-offline",
+    "title": "Membership Outreach Offline Webinar",
+    "date": "2024-05-13",
+    "category": "outreach",
+    "image": "images/Asset 41.png",
+    "description": "Dive into the world of ACS Student Chapter, BSMRSTU! This offline seminar unveils exclusive benefits of membership, including valuable resources, networking opportunities with students, faculty, and alumni, and skill-building workshops designed to ignite your passion for chemistry."
+  }
+]

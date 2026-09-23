@@ -1,0 +1,26 @@
+# Build output and local working material
+/public/
+/output/
+/checks/
+/tmp/
+/original-site/
+/.firebase/
+/calendar/
+/*.html
+!/google3d74b2f79116caad.html
+/css/site.*.css
+/data/generated-pages.json
+/tmp-*
+*.log
+.DS_Store
+node_modules/
+.env
+.env.*
+gha-creds-*.json
+*service-account*.json
+*.pem
+*.key
+
+data/backups/
+
+node_modules

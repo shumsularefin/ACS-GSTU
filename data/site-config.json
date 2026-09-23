@@ -1,0 +1,8 @@
+{
+  "cloudEnabled": true,
+  "firebase": {
+    "apiKey": "AIzaSyCPtzAtNAxRXR7s9DC0PRIwxYKdqnDS81I",
+    "authDomain": "acs-gstu.firebaseapp.com",
+    "projectId": "acs-gstu"
+  }
+}

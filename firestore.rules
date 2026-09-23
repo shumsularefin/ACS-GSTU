@@ -1,0 +1,130 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /certificateEvents/{eventId} {
+      allow get, list: if true;
+      allow create, update: if chapterEditor()
+        && request.resource.data.keys().hasOnly(['id','title','date','updatedAt','auditId'])
+        && request.resource.data.id == eventId
+        && eventId.matches('^[A-Za-z0-9_-]{1,100}$')
+        && request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 250
+        && request.resource.data.date is string && request.resource.data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.updatedAt == request.time && eventAudit(request.resource.data.auditId,eventId);
+      allow delete: if false;
+    }
+    match /certificateLookup/{lookupId} {
+      allow get: if true;
+      allow list, delete: if false;
+      allow create, update: if chapterEditor()
+        && lookupId.matches('^[a-f0-9]{64}$')
+        && request.resource.data.keys().hasOnly(['eventId','ids','auditId'])
+        && request.resource.data.eventId is string && request.resource.data.eventId.size() <= 100
+        && request.resource.data.ids is list && request.resource.data.ids.size() > 0 && request.resource.data.ids.size() <= 20 && eventAudit(request.resource.data.auditId,request.resource.data.eventId);
+    }
+    match /certificates/{certId} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if chapterEditor() && validCertificate(certId) && issueAudit(request.resource.data.auditId, certId) && (superAdmin() || (editorRole() == 'administrator' && request.resource.data.type != 'executive') || request.resource.data.type == 'participant');
+      allow update: if (superAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','revokedAt','revokedBy','auditId'])
+        && request.resource.data.status == 'revoked'
+        && request.resource.data.revokedAt == request.time
+        && request.resource.data.revokedBy == request.auth.uid && auditMatches(request.resource.data.auditId,'certificate.revoke',certId));
+      allow delete: if false;
+    }
+    function validCertificate(id) {
+      let d = request.resource.data;
+      return id.matches('^[A-Za-z0-9][A-Za-z0-9_-]{2,79}$')
+        && d.keys().hasOnly(['id','name','memID','designation','event','eventId','eventDate','dateIssued','type','status','achievement','templateVersion','certificate','createdAt','issuedBy','auditId'])
+        && d.id == id && d.name is string && d.name.size() > 0 && d.name.size() <= 160
+        && d.event is string && d.event.size() > 0 && d.event.size() <= 250
+        && d.memID is string && d.memID.size() <= 80
+        && d.designation is string && d.designation.size() <= 160
+        && d.eventId is string && d.eventId.size() <= 100
+        && d.eventDate is string && d.eventDate.size() <= 10
+        && d.dateIssued is string && d.dateIssued.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && d.type in ['participant','champion','runner-up','second-runner-up','instructor','teacher','institution','organization','guest','delegate','executive','achievement']
+        && d.status == 'issued' && d.templateVersion == 1
+        && d.achievement is string && d.achievement.size() <= 220
+        && d.createdAt == request.time && d.issuedBy == request.auth.uid
+        && d.certificate == {'id':d.id,'name':d.name,'memID':d.memID,'designation':d.designation,'event':d.event,'eventId':d.eventId,'eventDate':d.eventDate,'dateIssued':d.dateIssued,'type':d.type,'status':d.status,'achievement':d.achievement,'templateVersion':d.templateVersion};
+    }
+    function verified() { return request.auth != null && request.auth.token.email_verified == true; }
+    function superAdmin() { return verified() && request.auth.token.email.lower() == 'muhammadshamsularefin01@gmail.com'; }
+    function editorRole() {
+      let email = request.auth.token.email.lower();
+      return exists(/databases/$(database)/documents/chapterEditors/$(email)) && get(/databases/$(database)/documents/chapterEditors/$(email)).data.active == true ? get(/databases/$(database)/documents/chapterEditors/$(email)).data.role : '';
+    }
+    function chapterEditor() { return verified() && (superAdmin() || editorRole() in ['administrator','outreach']); }
+    function auditMatches(id,action,target) {
+      let log=getAfter(/databases/$(database)/documents/auditLogs/$(id)).data;
+      return log.actorUid == request.auth.uid && log.createdAt == request.time && log.action == action && log.target == target;
+    }
+    function issueAudit(id,certId) {
+      let log=getAfter(/databases/$(database)/documents/auditLogs/$(id)).data;
+      return log.actorUid == request.auth.uid && log.createdAt == request.time && log.action == 'certificate.issue' && certId in log.ids;
+    }
+    function eventAudit(id,eventId) {
+      let log=getAfter(/databases/$(database)/documents/auditLogs/$(id)).data;
+      return log.actorUid == request.auth.uid && log.createdAt == request.time && log.action == 'certificate.issue' && eventId in log.eventIds;
+    }
+    match /chapterEditors/{email} {
+      allow get: if verified() && (superAdmin() || request.auth.token.email.lower() == email);
+      allow list: if superAdmin();
+      allow create, update: if superAdmin() && email != 'muhammadshamsularefin01@gmail.com'
+        && request.resource.data.keys().hasOnly(['email','role','active','auditId','updatedAt','updatedBy'])
+        && request.resource.data.email == email && email.size() <= 200
+        && request.resource.data.role in ['administrator','outreach'] && request.resource.data.active is bool
+        && request.resource.data.updatedBy == request.auth.uid && request.resource.data.updatedAt == request.time
+        && auditMatches(request.resource.data.auditId,'access.set',email);
+      allow delete: if false;
+    }
+    match /auditLogs/{id} {
+      allow read: if superAdmin();
+      allow create: if chapterEditor()
+        && request.resource.data.keys().hasOnly(['actorUid','actorEmail','action','target','detail','createdAt','revision','ids','eventIds'])
+        && request.resource.data.actorUid == request.auth.uid && request.resource.data.actorEmail == request.auth.token.email.lower()
+        && request.resource.data.createdAt == request.time && request.resource.data.detail is string && request.resource.data.detail.size() <= 1000
+        && ((request.resource.data.action in ['content.publish','event.add'] && getAfter(/databases/$(database)/documents/siteContent/published).data.auditId == id && getAfter(/databases/$(database)/documents/siteContent/published).data.revision == request.resource.data.revision)
+          || (request.resource.data.action == 'access.set' && superAdmin() && getAfter(/databases/$(database)/documents/chapterEditors/$(request.resource.data.target)).data.auditId == id)
+          || (request.resource.data.action == 'certificate.issue' && request.resource.data.ids is list && request.resource.data.ids.size() > 0 && request.resource.data.ids.size() <= 40 && getAfter(/databases/$(database)/documents/certificates/$(request.resource.data.target)).data.auditId == id)
+          || (request.resource.data.action == 'certificate.revoke' && superAdmin() && getAfter(/databases/$(database)/documents/certificates/$(request.resource.data.target)).data.auditId == id));
+      allow update, delete: if false;
+    }
+    function validEvent(e,id) {
+      return e.keys().hasOnly(['id','title','date','category','image','description','location','registrationUrl','registrationStatus','sourceUrl','startsAt','endsAt'])
+        && e.id == id && id.matches('^[a-z0-9]+(-[a-z0-9]+)*$') && id.size() <= 80
+        && e.title is string && e.title.size() > 0 && e.title.size() <= 200
+        && e.date is string && e.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && e.category in ['outreach','development','sustainability','community']
+        && e.description is string && e.description.size() > 0 && e.description.size() <= 5000
+        && e.image is string && e.image.size() <= 2000 && e.location is string && e.location.size() <= 300
+        && e.registrationStatus in ['unpublished','open','closed'] && e.registrationUrl is string && e.registrationUrl.size() <= 2000
+        && e.sourceUrl is string && e.sourceUrl.size() <= 2000 && e.startsAt is string && e.startsAt.size() <= 35 && e.endsAt is string && e.endsAt.size() <= 35;
+    }
+    match /siteContent/{document} {
+      allow get: if document == 'published';
+      allow list, delete: if false;
+      allow create, update: if document == 'published' && chapterEditor()
+        && request.resource.data.keys().hasOnly(['payload','events','schemaVersion','revision','updatedAt','updatedBy','eventId','auditId'])
+        && request.resource.data.payload is string && request.resource.data.payload.size() < 600000
+        && request.resource.data.schemaVersion == 2 && request.resource.data.events is map && request.resource.data.events.size() <= 300
+        && request.resource.data.revision is int
+        && ((!exists(/databases/$(database)/documents/siteContent/published) && request.resource.data.revision == 1)
+          || (exists(/databases/$(database)/documents/siteContent/published) && request.resource.data.revision == resource.data.revision + 1))
+        && request.resource.data.updatedAt == request.time && request.resource.data.updatedBy == request.auth.uid
+        && ((superAdmin() && auditMatches(request.resource.data.auditId,'content.publish','published'))
+          || (resource.data.schemaVersion == 2 && request.resource.data.payload == resource.data.payload
+            && !(request.resource.data.eventId in resource.data.events)
+            && request.resource.data.events.diff(resource.data.events).affectedKeys().hasOnly([request.resource.data.eventId])
+            && validEvent(request.resource.data.events[request.resource.data.eventId],request.resource.data.eventId)
+            && auditMatches(request.resource.data.auditId,'event.add',request.resource.data.eventId)));
+    }
+    match /privateRosters/{id} {
+      allow get: if superAdmin();
+      allow create, update: if superAdmin() && id == 'members' && request.resource.data.keys().hasOnly(['years','auditId','updatedAt']) && request.resource.data.years is map && request.resource.data.updatedAt == request.time && auditMatches(request.resource.data.auditId,'content.publish','published') && getAfter(/databases/$(database)/documents/siteContent/published).data.auditId == request.resource.data.auditId;
+      allow list, delete: if false;
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

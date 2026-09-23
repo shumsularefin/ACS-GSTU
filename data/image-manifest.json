@@ -1,0 +1,392 @@
+{
+  "images/Asset 15 (2).png": [
+    {
+      "src": "images/optimized/asset-15-2-480.webp",
+      "width": 480,
+      "height": 672,
+      "bytes": 36228
+    },
+    {
+      "src": "images/optimized/asset-15-2-960.webp",
+      "width": 701,
+      "height": 981,
+      "bytes": 69440
+    }
+  ],
+  "images/Asset 16 (2).png": [
+    {
+      "src": "images/optimized/asset-16-2-480.webp",
+      "width": 480,
+      "height": 673,
+      "bytes": 21486
+    },
+    {
+      "src": "images/optimized/asset-16-2-960.webp",
+      "width": 700,
+      "height": 981,
+      "bytes": 42250
+    }
+  ],
+  "images/Asset 18.png": [
+    {
+      "src": "images/optimized/asset-18-480.webp",
+      "width": 480,
+      "height": 672,
+      "bytes": 32472
+    },
+    {
+      "src": "images/optimized/asset-18-960.webp",
+      "width": 700,
+      "height": 980,
+      "bytes": 57974
+    }
+  ],
+  "images/Asset 19.png": [
+    {
+      "src": "images/optimized/asset-19-480.webp",
+      "width": 480,
+      "height": 672,
+      "bytes": 25358
+    },
+    {
+      "src": "images/optimized/asset-19-960.webp",
+      "width": 700,
+      "height": 980,
+      "bytes": 43888
+    }
+  ],
+  "images/Asset 27.png": [
+    {
+      "src": "images/optimized/asset-27-480.webp",
+      "width": 398,
+      "height": 390,
+      "bytes": 14600
+    },
+    {
+      "src": "images/optimized/asset-27-960.webp",
+      "width": 398,
+      "height": 390,
+      "bytes": 14600
+    }
+  ],
+  "images/Asset 28.png": [
+    {
+      "src": "images/optimized/asset-28-480.webp",
+      "width": 92,
+      "height": 92,
+      "bytes": 3502
+    },
+    {
+      "src": "images/optimized/asset-28-960.webp",
+      "width": 92,
+      "height": 92,
+      "bytes": 3502
+    }
+  ],
+  "images/Asset 29.png": [
+    {
+      "src": "images/optimized/asset-29-480.webp",
+      "width": 289,
+      "height": 116,
+      "bytes": 5752
+    },
+    {
+      "src": "images/optimized/asset-29-960.webp",
+      "width": 289,
+      "height": 116,
+      "bytes": 5752
+    }
+  ],
+  "images/Asset 31.png": [
+    {
+      "src": "images/optimized/asset-31-480.webp",
+      "width": 480,
+      "height": 672,
+      "bytes": 68022
+    },
+    {
+      "src": "images/optimized/asset-31-960.webp",
+      "width": 701,
+      "height": 981,
+      "bytes": 132220
+    }
+  ],
+  "images/Asset 40.png": [
+    {
+      "src": "images/optimized/asset-40-480.webp",
+      "width": 480,
+      "height": 336,
+      "bytes": 24616
+    },
+    {
+      "src": "images/optimized/asset-40-960.webp",
+      "width": 960,
+      "height": 672,
+      "bytes": 72116
+    },
+    {
+      "src": "images/optimized/asset-40-1600.webp",
+      "width": 1001,
+      "height": 701,
+      "bytes": 82826
+    }
+  ],
+  "images/Asset 41.png": [
+    {
+      "src": "images/optimized/asset-41-480.webp",
+      "width": 480,
+      "height": 336,
+      "bytes": 35446
+    },
+    {
+      "src": "images/optimized/asset-41-960.webp",
+      "width": 960,
+      "height": 672,
+      "bytes": 101086
+    },
+    {
+      "src": "images/optimized/asset-41-1600.webp",
+      "width": 1001,
+      "height": 701,
+      "bytes": 116686
+    }
+  ],
+  "images/Asset 42.png": [
+    {
+      "src": "images/optimized/asset-42-480.webp",
+      "width": 480,
+      "height": 336,
+      "bytes": 6870
+    },
+    {
+      "src": "images/optimized/asset-42-960.webp",
+      "width": 960,
+      "height": 672,
+      "bytes": 18020
+    },
+    {
+      "src": "images/optimized/asset-42-1600.webp",
+      "width": 1001,
+      "height": 701,
+      "bytes": 20094
+    }
+  ],
+  "images/Asset 45.png": [
+    {
+      "src": "images/optimized/asset-45-480.webp",
+      "width": 480,
+      "height": 480,
+      "bytes": 14112
+    },
+    {
+      "src": "images/optimized/asset-45-960.webp",
+      "width": 684,
+      "height": 684,
+      "bytes": 24774
+    }
+  ],
+  "images/Asset 51.png": [
+    {
+      "src": "images/optimized/asset-51-480.webp",
+      "width": 480,
+      "height": 298,
+      "bytes": 17748
+    },
+    {
+      "src": "images/optimized/asset-51-960.webp",
+      "width": 960,
+      "height": 595,
+      "bytes": 53824
+    },
+    {
+      "src": "images/optimized/asset-51-1600.webp",
+      "width": 1245,
+      "height": 772,
+      "bytes": 79006
+    }
+  ],
+  "images/Asset 53.png": [
+    {
+      "src": "images/optimized/asset-53-480.webp",
+      "width": 480,
+      "height": 272,
+      "bytes": 21150
+    },
+    {
+      "src": "images/optimized/asset-53-960.webp",
+      "width": 960,
+      "height": 543,
+      "bytes": 61064
+    },
+    {
+      "src": "images/optimized/asset-53-1600.webp",
+      "width": 1492,
+      "height": 844,
+      "bytes": 112308
+    }
+  ],
+  "images/Asset 55_1.png": [
+    {
+      "src": "images/optimized/asset-55-1-480.webp",
+      "width": 480,
+      "height": 672,
+      "bytes": 34318
+    },
+    {
+      "src": "images/optimized/asset-55-1-960.webp",
+      "width": 701,
+      "height": 981,
+      "bytes": 69658
+    }
+  ],
+  "images/Asset 59.png": [
+    {
+      "src": "images/optimized/asset-59-480.webp",
+      "width": 480,
+      "height": 672,
+      "bytes": 17598
+    },
+    {
+      "src": "images/optimized/asset-59-960.webp",
+      "width": 701,
+      "height": 981,
+      "bytes": 27856
+    }
+  ],
+  "images/Asset are.jpg": [
+    {
+      "src": "images/optimized/asset-are-480.webp",
+      "width": 480,
+      "height": 672,
+      "bytes": 23858
+    },
+    {
+      "src": "images/optimized/asset-are-960.webp",
+      "width": 960,
+      "height": 1344,
+      "bytes": 61562
+    },
+    {
+      "src": "images/optimized/asset-are-1600.webp",
+      "width": 1600,
+      "height": 2240,
+      "bytes": 123706
+    }
+  ],
+  "images/hanifbhai.png": [
+    {
+      "src": "images/optimized/hanifbhai-480.webp",
+      "width": 480,
+      "height": 672,
+      "bytes": 11362
+    },
+    {
+      "src": "images/optimized/hanifbhai-960.webp",
+      "width": 701,
+      "height": 981,
+      "bytes": 21250
+    }
+  ],
+  "images/rone.png": [
+    {
+      "src": "images/optimized/rone-480.webp",
+      "width": 480,
+      "height": 672,
+      "bytes": 39822
+    },
+    {
+      "src": "images/optimized/rone-960.webp",
+      "width": 701,
+      "height": 981,
+      "bytes": 65776
+    }
+  ],
+  "images/safinbhai.png": [
+    {
+      "src": "images/optimized/safinbhai-480.webp",
+      "width": 480,
+      "height": 672,
+      "bytes": 35142
+    },
+    {
+      "src": "images/optimized/safinbhai-960.webp",
+      "width": 701,
+      "height": 981,
+      "bytes": 71480
+    }
+  ],
+  "images/shuvo bhai.png": [
+    {
+      "src": "images/optimized/shuvo-bhai-480.webp",
+      "width": 480,
+      "height": 672,
+      "bytes": 31438
+    },
+    {
+      "src": "images/optimized/shuvo-bhai-960.webp",
+      "width": 701,
+      "height": 981,
+      "bytes": 56848
+    }
+  ],
+  "images/slide01.jpg": [
+    {
+      "src": "images/optimized/slide01-480.webp",
+      "width": 480,
+      "height": 265,
+      "bytes": 6692
+    },
+    {
+      "src": "images/optimized/slide01-960.webp",
+      "width": 960,
+      "height": 530,
+      "bytes": 23520
+    },
+    {
+      "src": "images/optimized/slide01-1600.webp",
+      "width": 1600,
+      "height": 884,
+      "bytes": 48444
+    }
+  ],
+  "images/veri.jpg": [
+    {
+      "src": "images/optimized/veri-480.webp",
+      "width": 480,
+      "height": 341,
+      "bytes": 12636
+    },
+    {
+      "src": "images/optimized/veri-960.webp",
+      "width": 960,
+      "height": 683,
+      "bytes": 28528
+    },
+    {
+      "src": "images/optimized/veri-1600.webp",
+      "width": 1600,
+      "height": 1138,
+      "bytes": 52974
+    }
+  ],
+  "images/worldenviromentday.png": [
+    {
+      "src": "images/optimized/worldenviromentday-480.webp",
+      "width": 480,
+      "height": 270,
+      "bytes": 23314
+    },
+    {
+      "src": "images/optimized/worldenviromentday-960.webp",
+      "width": 960,
+      "height": 540,
+      "bytes": 75998
+    },
+    {
+      "src": "images/optimized/worldenviromentday-1600.webp",
+      "width": 1600,
+      "height": 900,
+      "bytes": 163044
+    }
+  ]
+}
