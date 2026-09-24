@@ -51,3 +51,6 @@
 .navbar .logo img.official-acs-logo{width:130px;height:auto;max-height:54px;filter:none}.home-page .navbar .logo img.official-acs-logo,.menu-open .navbar .logo img.official-acs-logo{filter:brightness(0) invert(1)}
 .editor-page [hidden]{display:none!important}
 .roster-import{margin:24px 0;padding:20px;background:#f3f6fb}.editor-steps{padding:16px;border-left:4px solid #323fa0;background:#f3f6fb}
+
+.footer .footer-quote img.acs-footer-lockup{display:block;margin:0 0 26px;padding:0;width:300px;height:auto;object-position:left center}
+.editor-panel{margin-bottom:32px}.editor-panel h2{margin:0 0 20px}.editor-panel h3{margin:32px 0 16px}.editor-panel p{margin:0 0 20px}.editor-panel form,.editor-panel .table-wrap,.editor-panel details{margin-bottom:24px}.editor-panel summary{padding:12px 0;margin-bottom:20px}.editor-toolbar{gap:12px;margin:20px 0}.editor-panel table{margin-bottom:24px}.editor-panel label{margin-bottom:16px}#editor-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:10000;width:min(650px,calc(100% - 32px));padding:18px 24px;background:#17365d;color:white;box-shadow:0 6px 30px #0003;border-radius:6px}#editor-toast.error{background:#8a2533}

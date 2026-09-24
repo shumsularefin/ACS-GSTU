@@ -22,5 +22,4 @@ gha-creds-*.json
 *.key
 
 data/backups/
-
 node_modules

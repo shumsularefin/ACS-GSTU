@@ -7,7 +7,7 @@ if(!process.env.FIRESTORE_EMULATOR_HOST)throw Error('A Firestore emulator is req
 const env=await initializeTestEnvironment({projectId:'demo-acs-rules',firestore:{rules:readFileSync('firestore.rules','utf8')}});
 const superEmail='muhammadshamsularefin01@gmail.com';let sequence=0;
 const account=(uid,email,verified=true)=>({uid,email,db:env.authenticatedContext(uid,{email,email_verified:verified}).firestore()});
-const owner=account('owner',superEmail),outreach=account('outreach','outreach@example.com'),admin=account('admin','admin@example.com'),stranger=account('stranger','stranger@example.com'),unverified=account('unverified',superEmail,false),anon=env.unauthenticatedContext().firestore();
+const delegated=account('delegated','delegated@example.com'),owner=account('owner',superEmail),outreach=account('outreach','outreach@example.com'),admin=account('admin','admin@example.com'),stranger=account('stranger','stranger@example.com'),unverified=account('unverified',superEmail,false),anon=env.unauthenticatedContext().firestore();
 function log(batch,a,action,target,extra={}){const id='log-'+(++sequence);batch.set(doc(a.db,'auditLogs',id),{actorUid:a.uid,actorEmail:a.email,action,target,detail:'Test action',createdAt:serverTimestamp(),...extra});return id;}
 function grant(a,email,role,active=true){const b=writeBatch(a.db),id=log(b,a,'access.set',email);b.set(doc(a.db,'chapterEditors',email),{email,role,active,auditId:id,updatedAt:serverTimestamp(),updatedBy:a.uid});return b.commit();}
 const event=id=>({id,title:'Test event',date:'2026-10-01',category:'outreach',image:'',description:'Test description',location:'',registrationUrl:'',registrationStatus:'unpublished',sourceUrl:'',startsAt:'',endsAt:''});
@@ -36,5 +36,21 @@ try{
  await assertFails(getDocs(collection(outreach.db,'auditLogs')));await assertSucceeds(getDocs(collection(owner.db,'auditLogs')));
  await assertFails(updateDoc(doc(owner.db,'auditLogs','log-1'),{detail:'Changed history'}));
  await assertSucceeds(grant(owner,outreach.email,'outreach',false));await assertFails(issue(outreach,['AFTERREVOKE']));
+
+ await assertSucceeds(grant(owner,delegated.email,'super-admin'));
+ await assertSucceeds(getDocs(collection(delegated.db,'auditLogs')));
+ await assertSucceeds(grant(owner,outreach.email,'outreach',true));
+ const state=await getDoc(doc(owner.db,'siteContent','published'));
+ const sectionBatch=writeBatch(outreach.db),sectionLog=log(sectionBatch,outreach,'content.update','homepage',{revision:state.data().revision+1});
+ sectionBatch.update(doc(outreach.db,'siteContent','published'),{homepage:{images:['images/photo.jpg']},revision:state.data().revision+1,eventId:'homepage',auditId:sectionLog,updatedAt:serverTimestamp(),updatedBy:outreach.uid});await assertSucceeds(sectionBatch.commit());
+ await assertFails(updateDoc(doc(outreach.db,'siteContent','published'),{payload:'tampered'}));
+ const imageID='00000000-0000-4000-8000-000000000001';
+ const imageBatch=writeBatch(outreach.db),imageLog=log(imageBatch,outreach,'image.add',imageID);
+ imageBatch.set(doc(outreach.db,'siteImages',imageID),{image:'data:image/jpeg;base64,AAAA',name:'test.jpg',createdBy:outreach.uid,createdAt:serverTimestamp(),auditId:imageLog});await assertSucceeds(imageBatch.commit());
+ await assertSucceeds(getDoc(doc(anon,'siteImages',imageID)));await assertFails(getDocs(collection(anon,'siteImages')));
+ await assertFails(setDoc(doc(stranger.db,'siteImages','00000000-0000-4000-8000-000000000002'),{image:'data:image/jpeg;base64,AAAA'}));
+ const deletion=writeBatch(delegated.db),deleteLog=log(deletion,delegated,'access.delete',admin.email);deletion.set(doc(delegated.db,'editorRemovals',admin.email),{auditId:deleteLog});deletion.delete(doc(delegated.db,'chapterEditors',admin.email));await assertSucceeds(deletion.commit());
+ await assertFails(issue(admin,['DELETEDACCESS']));
+ const removeImage=writeBatch(owner.db),removeLog=log(removeImage,owner,'image.delete',imageID);removeImage.set(doc(owner.db,'imageRemovals',imageID),{auditId:removeLog});removeImage.delete(doc(owner.db,'siteImages',imageID));await assertSucceeds(removeImage.commit());
  console.log('PASS: super-admin grants; outreach create-only events; protected administration; category restrictions; mandatory immutable audit logs; revocation; 40-record batch; anonymous read privacy.');
 }finally{await env.cleanup();}

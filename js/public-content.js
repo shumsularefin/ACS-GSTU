@@ -38,7 +38,7 @@ async function load(){
     try{
       const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),5000);
       let response;try{response=await fetch(`https://firestore.googleapis.com/v1/projects/${encodeURIComponent(config.firebase.projectId)}/databases/(default)/documents/siteContent/published`,{signal:controller.signal});}finally{clearTimeout(timer);}
-      if(response.ok){const doc=await response.json(),raw=JSON.parse(doc.fields.payload.stringValue);if(Number(doc.fields.schemaVersion?.integerValue)===2)raw.events=Object.values(doc.fields.events?.mapValue?.fields||{}).map(decodeField);const content=normalizeContent(raw);paint(content);try{sessionStorage.setItem(cacheKey,JSON.stringify({time:Date.now(),content}));}catch{}}
+      if(response.ok){const doc=await response.json(),raw=JSON.parse(doc.fields.payload.stringValue);if(Number(doc.fields.schemaVersion?.integerValue)===2)raw.events=Object.values(doc.fields.events?.mapValue?.fields||{}).map(decodeField);if(doc.fields.homepage)raw.homepage=decodeField(doc.fields.homepage);if(doc.fields.membership)raw.membership=decodeField(doc.fields.membership);const content=normalizeContent(raw);paint(content);try{sessionStorage.setItem(cacheKey,JSON.stringify({time:Date.now(),content}));}catch{}}
       else{try{sessionStorage.setItem(cacheKey,JSON.stringify({time:Date.now(),content:cached?.content||null}));}catch{}}
     }catch{/* Keep static/cached content when offline or when quota is unavailable. */}
   }

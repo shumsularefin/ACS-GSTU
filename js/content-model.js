@@ -4,6 +4,7 @@ export function contentSignature(data){let hash=2166136261;for(const ch of JSON.
 const text = (v,max=5000) => { const s=String(v??'').trim(); if(s.length>max) throw Error(`Text exceeds ${max} characters.`); return s; };
 export function safeURL(value, image=false) {
   const url=text(value,2000); if(!url) return '';
+  if(image && /^media:[a-f0-9-]{36}$/.test(url))return url;
   if(image && /^images\/[a-z0-9_ /().@-]+\.(webp|png|jpe?g)$/i.test(url) && !url.includes('..')) return url;
   let parsed; try{parsed=new URL(url);}catch{throw Error('Use a complete HTTPS URL'+(image?' or an images/ path.':'.'));}
   if(parsed.protocol!=='https:' || parsed.username || parsed.password) throw Error('Only HTTPS URLs are supported.');
@@ -18,7 +19,6 @@ export function normalizeEvent(raw) {
   if(!e.title || !validDate(e.date) || !e.description) throw Error(`${e.id}: title, valid YYYY-MM-DD date, and description are required.`);
   if(!Object.hasOwn(categories,e.category) || e.category==='all') throw Error(`${e.id}: unknown category.`);
   if(!['unpublished','open','closed'].includes(e.registrationStatus)) throw Error(`${e.id}: invalid registration status.`);
-  if(e.registrationStatus==='open' && !e.registrationUrl) throw Error(`${e.id}: open registration needs an HTTPS form URL.`);
   if(e.startsAt || e.endsAt) {
     const zoned=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:\d{2})$/;
     if(!zoned.test(e.startsAt)||!zoned.test(e.endsAt)||!validDate(e.startsAt.slice(0,10))||!validDate(e.endsAt.slice(0,10))||!Number.isFinite(Date.parse(e.startsAt))||!Number.isFinite(Date.parse(e.endsAt))||Date.parse(e.endsAt)<=Date.parse(e.startsAt)) throw Error(`${e.id}: provide start and end with a timezone offset; end must follow start.`);

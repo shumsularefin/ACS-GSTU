@@ -18,13 +18,13 @@ Open http://127.0.0.1:4173/. Edit `src/pages`, `src/partials`, `css/site.css` an
 
 Sign in with Google at `/admin.html`. The verified account `muhammadshamsularefin01@gmail.com` is the permanent super-admin. It can assign or disable access by email, manage executive members and rosters, homepage images, membership information, all events and certificate categories, and view activity logs.
 
-Outreach editors can add new events and issue participant certificates. Chapter administrators can add events and issue all categories except executive-service recognition. Only the super-admin can edit existing events, change administrative content, grant access or revoke certificates. Firestore rules enforce these restrictions. Audit entries use server timestamps and are immutable through the application. Old UID-based grants are replaced by email-based grants; assign existing editors again in the access panel.
+Outreach editors can add new events and issue participant certificates. Chapter administrators can add events and issue all categories except executive-service recognition. Super-admins can edit existing events, executive rosters, editor access and revoke certificates. Outreach and chapter administrators can also update homepage images and membership/renewal information. Additional super-admins can be assigned; the permanent owner remains protected. Firestore rules enforce these restrictions. Audit entries use server timestamps and are immutable through the application. Old UID-based grants are replaced by email-based grants; assign existing editors again in the access panel.
 
 The super-admin's first login upgrades the existing content document to role-aware storage without discarding published content. Browser drafts are separate from published data: save forms, review, then publish. Export backups before clearing browser storage. Open upcoming events are highlighted automatically on Home. Add up to five hosted image paths or HTTPS URLs to the homepage image list.
 
 ## Certificates
 
-Import participant lists as Excel, CSV or JSON. Review each category using the recipient preview selector, export the batch JSON, then issue. Keep batch exports private. Retries skip identical issued records; conflicting IDs are rejected. Batches are committed in groups of 40, so an interrupted batch can be resumed using the exported IDs.
+Enter one recipient directly, or import participant lists as Excel, CSV or JSON. Preview the certificate, confirm the details, then Save and issue certificates. A recovery JSON downloads automatically before issuance. Keep batch exports private. Retries skip identical issued records; conflicting IDs are rejected. Batches are committed in groups of 40, so an interrupted batch can be resumed using the exported IDs.
 
 Categories include participant, champion, runner-up, second-runner-up, instructor, teacher, guest, delegate, organization, institution, executive and achievement. Award editions use gold/silver/bronze accents. Formal editions retain ACS identity with understated gold detailing. Executive recognition includes a fiscal-year/service-term field and is restricted to the super-admin. Advisor and Co Advisor names and reproduced signatures follow the supplied chapter references.
 
@@ -32,7 +32,7 @@ Each QR encodes the certificate's unique credential URL. Scanning opens the onli
 
 ## Deployment and collaboration
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for automatic GitHub deployment, developer access, backups and rollback. The repository must never contain private spreadsheets, credential exports, secrets or service-account keys. `scripts/package-source.py` produces a clean source ZIP; `scripts/package-deploy.py` produces an offline Hosting bundle after building.
+See [UPDATE-GUIDE.md](UPDATE-GUIDE.md) for everyday editing and [PROJECT-BRIEF.md](PROJECT-BRIEF.md) for the consolidated requirements. See [DEPLOYMENT.md](DEPLOYMENT.md) for automatic GitHub deployment, developer access, backups and rollback. The repository must never contain private spreadsheets, credential exports, secrets or service-account keys. `scripts/package-source.py` produces a clean source ZIP; `scripts/package-deploy.py` produces an offline Hosting bundle after building.
 
 The website uses Firebase Hosting, Authentication and Firestore. It requires no paid Cloud Functions, App Hosting or Cloud Storage. Free-tier quotas still apply. Image files can be added to `images/` through GitHub; event registration uses links to chapter-approved external forms.
 
