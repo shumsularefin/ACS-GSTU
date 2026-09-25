@@ -44,14 +44,16 @@ test('events have unique detail pages and categories preserve selected year', ()
   assert.ok(!outreach.includes('href="event-green-and-clean.html"'));
   assert.ok(read('public/activities-2026-outreach.html').includes('No events have been published'));
 });
-test('founders are the default; all years provide native expandable rosters and placeholders', () => {
+test('founders are the default; all years provide rosters and founding executives appear in 2024', () => {
   assert.ok(read('public/team.html').includes('Md. Morshed Alam'));
   for (const year of [2024,2025,2026]) {
     const html = read(`public/team-${year}.html`);
     assert.ok(html.includes('<details class="roster">'));
     assert.ok(html.includes('General members'));
     assert.ok(html.includes('Premium members'));
-    assert.ok(html.includes('Placeholder committee'));
+    assert.ok(!html.includes('Placeholder committee'));
+    if(year===2024)assert.ok(html.includes('Md. Morshed Alam'));
+    assert.ok(!read('public/team.html').includes('<p>President</p>'));
   }
 });
 test('performance: no animation bundles, blocking preloader, or homepage activity section', () => {

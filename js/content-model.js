@@ -45,6 +45,7 @@ export function normalizeMembership(raw) {
 export function normalizeContent(raw) {
   if(!Array.isArray(raw.events)||raw.events.length>300||!Array.isArray(raw.team?.founders)||!raw.team?.committees)throw Error('Invalid site content.');
   const content={schemaVersion:1,events:unique(raw.events.map(normalizeEvent),e=>e.id,'event ID'),team:{founders:unique(raw.team.founders.map(m=>normalizePerson(m)),m=>m.name,'founder'),committees:{}},membership:normalizeMembership(raw.membership)};
+  content.certificateArchive=Array.isArray(raw.certificateArchive)?raw.certificateArchive.filter(id=>/^[A-Za-z0-9_-]{1,100}$/.test(id)):[];
   const hero=raw.homepage?.images||['images/optimized/slide01-1600.webp'];if(!Array.isArray(hero)||hero.length>5)throw Error('Use up to five homepage images.');content.homepage={images:hero.map(url=>safeURL(url,true)).filter(Boolean)};
   for(const [year,entry] of Object.entries(raw.team.committees)) {
     if(!/^20\d{2}$/.test(year)||!Array.isArray(entry.members)||!Array.isArray(entry.roster))throw Error(`Invalid committee year or record: ${year}`);
@@ -72,7 +73,7 @@ export function mergeRows(base,kind,rows) {
   rows.forEach((row,index)=>{
     try {
       const mapped={};for(const [k,v] of Object.entries(row)){const normalized=k.toLowerCase().replace(/[^a-z]/g,'');const key=aliases[normalized];if(key)mapped[key]=String(v??'').trim();}
-      if(mapped.image && !mapped.image.includes('/') && !mapped.image.startsWith('https:')) mapped.image='images/'+mapped.image;
+      if(mapped.image && !mapped.image.includes('/') && !/^(https:|media:)/.test(mapped.image)) mapped.image='images/'+mapped.image;
       let list, record, key;
       if(kind==='events'){record=normalizeEvent(mapped);list=data.events;key=record.id;}
       else if(kind==='founders'){record=normalizePerson(mapped);list=data.team.founders;key=record.name;}

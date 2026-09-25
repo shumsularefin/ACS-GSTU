@@ -48,6 +48,7 @@ export async function connect(config) {
         completed+=group.length;onProgress(completed);
       }
     },
+    async certificateEvents(){const snap=await dbSDK.getDocs(dbSDK.collection(db,'certificateEvents'));return snap.docs.map(d=>d.data());},
     async certificate(id){const snap=await dbSDK.getDocFromServer(dbSDK.doc(db,'certificates',id));return snap.exists()?snap.data():null;},
     async revokeCertificate(id){await dbSDK.runTransaction(db,async tx=>{const r=dbSDK.doc(db,'certificates',id),s=await tx.get(r);if(!s.exists())throw Error('Credential not found.');const auditId=audit(tx,'certificate.revoke',id,'Revoked credential');tx.update(r,{auditId,status:'revoked',revokedAt:dbSDK.serverTimestamp(),revokedBy:auth.currentUser.uid});});},
     async publish(content,expectedRevision){

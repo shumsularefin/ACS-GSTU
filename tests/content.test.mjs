@@ -5,6 +5,13 @@ import {normalizeContent,normalizeEvent,mergeRows,calendarICS,calendarValues,eve
 import {renderEvent,renderMembership} from '../js/content-render.js';
 const data=normalizeContent(JSON.parse(fs.readFileSync('public/data/content.json','utf8')));
 const event={...data.events[0],date:'2026-10-15',startsAt:'2026-10-15T10:00:00+06:00',endsAt:'2026-10-15T12:00:00+06:00',registrationStatus:'open',registrationUrl:'https://example.org/register'};
+test('uploaded photo references survive member and spreadsheet saves',()=>{
+ const image='media:f956fde7-f385-47fc-a67a-19c1395b220b';
+ const next=mergeRows(data,'committee',[{year:'2026',name:'Uploaded Member',role:'President',image}]);
+ assert.equal(next.team.committees['2026'].members.find(m=>m.name==='Uploaded Member').image,image);
+ const founders=mergeRows(data,'founders',[{name:'Uploaded Founder',role:'Founder',image}]);
+ assert.equal(founders.team.founders.at(-1).image,image);
+});
 test('Excel rows merge by name/year, preserve other years, ignore private columns',()=>{
  const next=mergeRows(data,'roster',[{Year:'2026',Name:'Example Member','Membership tier':'Premium',Email:'private@example.org'}]);
  assert.deepEqual(next.team.committees['2026'].roster,[{name:'Example Member',tier:'premium'}]);

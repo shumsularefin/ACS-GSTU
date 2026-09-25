@@ -63,7 +63,48 @@
   ],
   "committees": {
     "2024": {
-      "members": [],
+      "members": [
+        {
+          "name": "Md. Morshed Alam",
+          "role": "President",
+          "image": "images/Asset 55_1.png"
+        },
+        {
+          "name": "Abdulla Al Noman",
+          "role": "Vice President",
+          "image": "images/Asset 16 (2).png"
+        },
+        {
+          "name": "Md. Foysal Sikdar",
+          "role": "General Secretary",
+          "image": "images/Asset 15 (2).png"
+        },
+        {
+          "name": "Shariful Islam",
+          "role": "Treasurer",
+          "image": "images/Asset 31.png"
+        },
+        {
+          "name": "Al Shahariar Shuvo",
+          "role": "Administration Secretary",
+          "image": "images/shuvo bhai.png"
+        },
+        {
+          "name": "Shumsul Arefin",
+          "role": "Managing Secretary",
+          "image": "images/Asset are.jpg"
+        },
+        {
+          "name": "Shahidul Islam",
+          "role": "Organizing Secretary",
+          "image": "images/rone.png"
+        },
+        {
+          "name": "Md. Mirajul Islam",
+          "role": "Publishing Secretary",
+          "image": "images/Asset 59.png"
+        }
+      ],
       "roster": []
     },
     "2025": {
