@@ -19,7 +19,9 @@ export function normalizeEvent(raw) {
   if(!e.title || !validDate(e.date) || !e.description) throw Error(`${e.id}: title, valid YYYY-MM-DD date, and description are required.`);
   if(!Object.hasOwn(categories,e.category) || e.category==='all') throw Error(`${e.id}: unknown category.`);
   if(!['unpublished','open','closed'].includes(e.registrationStatus)) throw Error(`${e.id}: invalid registration status.`);
-  if(e.startsAt || e.endsAt) {
+  if(raw.endDate){if(!validDate(raw.endDate)||raw.endDate<e.date)throw Error('End date must be on or after the start date.');if(!e.startsAt&&!e.endsAt&&raw.endDate!==e.date){e.startsAt=e.date;e.endsAt=raw.endDate;}else if(e.endsAt&&e.endsAt.slice(0,10)!==raw.endDate)throw Error('End date must match the end time date.');}
+  if(validDate(e.startsAt)&&validDate(e.endsAt)){if(e.startsAt!==e.date||e.endsAt<e.date)throw Error('Event date range is invalid.');}
+  else if(e.startsAt || e.endsAt) {
     const zoned=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:\d{2})$/;
     if(!zoned.test(e.startsAt)||!zoned.test(e.endsAt)||!validDate(e.startsAt.slice(0,10))||!validDate(e.endsAt.slice(0,10))||!Number.isFinite(Date.parse(e.startsAt))||!Number.isFinite(Date.parse(e.endsAt))||Date.parse(e.endsAt)<=Date.parse(e.startsAt)) throw Error(`${e.id}: provide start and end with a timezone offset; end must follow start.`);
     if(e.startsAt.slice(0,10)!==e.date) throw Error(`${e.id}: start date must match the event date.`);
@@ -54,11 +56,11 @@ export function normalizeContent(raw) {
   if(new TextEncoder().encode(JSON.stringify(content)).length>600000)throw Error('Content exceeds the 600 KB publishing limit. Split the archive before adding more records.');
   return content;
 }
-export function eventPast(e,now=new Date()) {return e.endsAt?Date.parse(e.endsAt)<now.getTime():e.date<new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Dhaka',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}
+export function eventPast(e,now=new Date()) {return e.endsAt&&!validDate(e.endsAt)?Date.parse(e.endsAt)<now.getTime():(e.endsAt||e.date)<new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Dhaka',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}
 export function calendarValues(e) {
   const utc=s=>new Date(s).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}Z$/,'Z');
-  if(e.startsAt)return {start:utc(e.startsAt),end:utc(e.endsAt),allDay:false};
-  const next=new Date(`${e.date}T00:00:00Z`);next.setUTCDate(next.getUTCDate()+1);
+  if(e.startsAt&&!validDate(e.startsAt))return {start:utc(e.startsAt),end:utc(e.endsAt),allDay:false};
+  const next=new Date(`${e.endsAt||e.date}T00:00:00Z`);next.setUTCDate(next.getUTCDate()+1);
   return {start:e.date.replaceAll('-',''),end:next.toISOString().slice(0,10).replaceAll('-',''),allDay:true};
 }
 export function calendarICS(e) {
@@ -69,7 +71,7 @@ export function calendarICS(e) {
 export function googleCalendarURL(e){const t=calendarValues(e);const q=new URLSearchParams({action:'TEMPLATE',text:e.title,dates:`${t.start}/${t.end}`,details:e.description,location:e.location||'',ctz:'Asia/Dhaka'});return `https://calendar.google.com/calendar/render?${q}`;}
 export function mergeRows(base,kind,rows) {
   const data=structuredClone(base), seen=new Set();
-  const aliases={membershipid:'memID',memid:'memID',membersname:'name',membername:'name',fullname:'name',eventid:'id',membershiptier:'tier',photofilename:'image',photo:'image',year:'year',name:'name',role:'role',title:'title',date:'date',category:'category',description:'description',registrationurl:'registrationUrl',registrationstatus:'registrationStatus',startsat:'startsAt',endsat:'endsAt',sourceurl:'sourceUrl',location:'location',image:'image',id:'id',tier:'tier'};
+  const aliases={membershipid:'memID',memid:'memID',membersname:'name',membername:'name',fullname:'name',eventid:'id',membershiptier:'tier',photofilename:'image',photo:'image',year:'year',name:'name',role:'role',title:'title',date:'date',enddate:'endDate',category:'category',description:'description',registrationurl:'registrationUrl',registrationstatus:'registrationStatus',startsat:'startsAt',endsat:'endsAt',sourceurl:'sourceUrl',location:'location',image:'image',id:'id',tier:'tier'};
   rows.forEach((row,index)=>{
     try {
       const mapped={};for(const [k,v] of Object.entries(row)){const normalized=k.toLowerCase().replace(/[^a-z]/g,'');const key=aliases[normalized];if(key)mapped[key]=String(v??'').trim();}

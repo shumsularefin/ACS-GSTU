@@ -50,3 +50,13 @@ test('registration respects status/date and membership content is escaped',()=>{
 });
 
 test('roster membership IDs match updates but never enter public content',async()=>{const {publicContent}=await import('../js/content-model.js');const {packContent}=await import('../js/editor-access.js');const fs=await import('node:fs');const base=JSON.parse(fs.readFileSync('public/data/content.json'));const added=mergeRows(base,'roster',[{Year:2026,'Members Name':'Member Test','Membership ID':'001234',Tier:'general'}]);const updated=mergeRows(added,'roster',[{Year:2026,'Members Name':'Member Renamed','Membership ID':'001234',Tier:'premium'}]);assert.equal(updated.team.committees['2026'].roster.length,1);assert.equal(updated.team.committees['2026'].roster[0].memID,'001234');assert.ok(!JSON.stringify(publicContent(updated)).includes('001234'));assert.ok(!packContent(updated).payload.includes('001234'));});
+
+test('multi-day events keep the final day open and calendars include every day',()=>{
+ const range=normalizeEvent({...event,startsAt:'',endsAt:'',date:'2026-09-30',endDate:'2026-10-06'});
+ assert.equal(range.startsAt,'2026-09-30');assert.equal(range.endsAt,'2026-10-06');
+ assert.deepEqual(calendarValues(range),{start:'20260930',end:'20261007',allDay:true});
+ assert.equal(eventPast(range,new Date('2026-10-06T16:00:00Z')),false);
+ assert.equal(eventPast(range,new Date('2026-10-06T18:01:00Z')),true);
+ assert.match(renderEvent({...data,events:[range]},range.id),/30 September 2026 – 6 October 2026/);
+ assert.throws(()=>normalizeEvent({...event,startsAt:'',endsAt:'',endDate:'2026-10-01'}),/End date/);
+});

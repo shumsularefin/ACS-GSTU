@@ -4,13 +4,15 @@
 
 Open https://acs-gstu.web.app/admin.html and choose Sign in with Google. Use an account granted access by a super-admin. The latest published records load automatically.
 
+- **Multi-day programs:** use Start date and optional End date. Calendar downloads include the final day. Leave times blank for all-day programs.
+- **Member order:** use the ↑ and ↓ buttons beside each person, then Publish website. The Team page follows this order.
 - **New event:** click New event, enter a permanent lowercase Event ID, title, date, category and description. Upload a thumbnail from your device if desired. The registration URL is optional. Super-admins click Save event changes, then Publish website. Outreach/administrator editors use Publish new event.
 - **Homepage images:** upload images from your device or add existing URLs. Each line is one slide, up to five. Remove a line to remove a slide. Super-admins save the section then Publish website; other editors save the section directly to the live site. Visitors get automatic rotation and Pause/Play controls.
 - **Membership information:** edit the Home page benefits and renewal fields, then save. Super-admins also click Publish website.
 - **Annual roster:** select General / premium roster, choose year and tier, upload a spreadsheet with Members Name and Membership ID, inspect the preview, then Add these members to changes and Publish website. Store IDs as text in Excel to preserve leading zeroes. Public names and tiers appear on Team; IDs remain private.
 - **Committee/founder:** select the record type and year, enter name, role and optional photo, then save and publish. Edit/Remove actions are beside existing records.
 
-Click a section heading to collapse or expand it. The section navigation reopens the selected section, and Back to top returns to the page header.
+Sections start collapsed. Click the large + control or section heading to expand it. Publish website is the first section at the top. If publishing finds unsaved edits, it names each section and opens/highlights the first one; save that section, then publish. Certificate and editor-access inputs do not block website publishing. The section navigation reopens the selected section, and Back to top returns to the page header.
 
 A notification confirms each action. If a form does not save, the notification identifies the invalid field. Saving an administrative draft is separate from publishing it. If another editor published first, export your changes, Reload live website, and reapply your changes.
 

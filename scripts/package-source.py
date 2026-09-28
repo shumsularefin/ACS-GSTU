@@ -13,7 +13,7 @@ files.extend(root / 'css' / name for name in ['style.css', 'site.css', 'original
 modules = ['media.js','site-shell.js','homepage.js','editor-access.js','admin-access-panel.js','content-model.js','content-render.js','public-content.js','admin.js','cloud-editor.js','excel-worker.js','certificate-model.js','certificate-render.js','certificate-admin.js','verify.js']
 files.extend(root / 'js' / name for name in modules)
 files.extend(p for p in (root / 'js/vendor').rglob('*') if p.is_file())
-files.extend(root / 'scripts' / name for name in ['build.mjs','serve.mjs','import-content.mjs','package-deploy.py','package-source.py','check-browser.cjs','check-final-editor.cjs','check-editor-roles.cjs','check-certificates.cjs','check-member-certificates.cjs','check-layout-filters.cjs','check-filter-frames.cjs','check-firestore-rules.mjs'])
+files.extend(root / 'scripts' / name for name in ['build.mjs','serve.mjs','import-content.mjs','package-deploy.py','package-source.py','check-browser.cjs','check-final-editor.cjs','check-editor-usability.cjs','check-editor-roles.cjs','check-certificates.cjs','check-member-certificates.cjs','check-layout-filters.cjs','check-filter-frames.cjs','check-firestore-rules.mjs'])
 with ZipFile(target, 'w', ZIP_DEFLATED) as archive:
     for p in sorted(set(files)):
         if p.name == 'generated-pages.json' or 'backups' in p.parts:

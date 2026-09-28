@@ -2,7 +2,7 @@ const {chromium}=require('playwright');const fs=require('fs'),assert=require('as
 (async()=>{fs.mkdirSync('output/pdf',{recursive:true});const browser=await chromium.launch({headless:true,channel:'msedge'});const context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});
 await context.route('**/data/site-config.json',r=>r.fulfill({contentType:'application/json',body:JSON.stringify({...JSON.parse(fs.readFileSync('data/site-config.json')),cloudEnabled:false})}));
 const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
-await page.goto('http://127.0.0.1:4173/admin.html');await page.locator('#editor-workspace').waitFor();
+await page.goto('http://127.0.0.1:4173/admin.html');await page.locator('#editor-workspace').waitFor();await page.getByRole('button',{name:'Digital certificates',exact:true}).click();
 await page.locator('#certificate-file').setInputFiles({name:'participants.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify([{Name:'Ayesha Rahman',ID:'SAMPLE-ACS-2026',Type:'participant',Event:'Research Recharge 2026','Event date':'2026-09-21'}]))});
 await page.getByText('File loaded. Select event and issue date, then review.').waitFor();await page.locator('#certificate-review').click();await page.locator('#certificate-preview svg').waitFor();
 await page.locator('#certificate-preview').screenshot({path:'checks/certificate-design.png'});

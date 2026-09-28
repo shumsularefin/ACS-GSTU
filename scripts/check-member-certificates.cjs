@@ -32,7 +32,7 @@ const fs=require('fs'),assert=require('assert/strict'),crypto=require('crypto');
  await page.getByText('No issued certificate matches',{exact:false}).waitFor();
  assert.equal(await page.locator('.certificate-match').count(),0);
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
- await page.goto('http://127.0.0.1:4173/admin.html');await page.locator('#editor-workspace').waitFor();
+ await page.goto('http://127.0.0.1:4173/admin.html');await page.locator('#editor-workspace').waitFor();await page.getByRole('button',{name:'Digital certificates',exact:true}).click();
  const sandbox={};require('vm').createContext(sandbox);require('vm').runInContext(fs.readFileSync('js/vendor/xlsx.full.min.js','utf8'),sandbox);const XLSX=sandbox.XLSX;
  const workbook=XLSX.utils.book_new();XLSX.utils.book_append_sheet(workbook,XLSX.utils.json_to_sheet([{Name:'Ayesha Rahman','Membership ID':'MEM001',Event:'Workshop','Event date':'2026-09-21'}]),'Participants');
  await page.locator('#certificate-file').setInputFiles({name:'participants.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from(XLSX.write(workbook,{type:'array',bookType:'xlsx'}))});
