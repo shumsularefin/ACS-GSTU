@@ -116,8 +116,11 @@
  .home-page .swiper-slider .swiper-slide .slide-inner:after{display:none}
 }
 
-/* Draw attention with a soft pill-shaped pulse, without overlay layers. */
-.home-page .hero-registration{border-color:#8dfff0;background:rgba(102,239,221,.15);animation:registration-glow 3s ease-in-out infinite}
-@keyframes registration-glow{0%,100%{box-shadow:0 0 0 0 rgba(109,255,233,0),0 0 8px rgba(109,255,233,.14)}50%{box-shadow:0 0 0 5px rgba(109,255,233,.08),0 0 22px rgba(109,255,233,.35)}}
-.home-page .hero-registration:hover,.home-page .hero-registration:focus-visible{animation:none;background:rgba(102,239,221,.25);box-shadow:0 0 18px rgba(109,255,233,.35)}
-@media(prefers-reduced-motion:reduce){.home-page .hero-registration{animation:none;box-shadow:0 0 12px rgba(109,255,233,.24)}}
+/* A bright opaque fill keeps emphasis inside the rounded button. */
+.home-page .hero-registration{gap:12px;border:1px solid #a9fff0;background:linear-gradient(110deg,#52e4ce 15%,#baffec 45%,#52e4ce 75%);background-size:220% 100%;color:#102b48;box-shadow:none;filter:none;backdrop-filter:none;animation:registration-sweep 1.8s ease-in-out infinite alternate;transition:none}
+.home-page .hero-registration::before,.home-page .hero-registration::after{content:none}
+.home-page .registration-arrow{display:inline-block;font-size:21px;line-height:1;animation:registration-arrow 1.8s ease-in-out infinite}
+@keyframes registration-sweep{from{background-position:0% 50%}to{background-position:100% 50%}}
+@keyframes registration-arrow{0%,65%,100%{transform:translateX(0)}35%{transform:translateX(4px)}}
+.home-page .hero-registration:hover,.home-page .hero-registration:focus-visible{animation:none;background:#baffec;color:#102b48;box-shadow:none}
+@media(prefers-reduced-motion:reduce){.home-page .hero-registration,.home-page .registration-arrow{animation:none}}
