@@ -14,7 +14,9 @@ async function formalCertificateSVG(c,{preview=false}={}){
  const center=161.30+842.22/2; // Exact center of the supplied SVG artboard.
  function text(value,font,x,y,size,color='#524f4d',maxWidth=650){
   const valueText=String(value??'');size=Math.min(size,size*maxWidth/Math.max(1,font.getAdvanceWidth(valueText,size)));
-  return `<path fill="${color}" d="${font.getPath(valueText,x-font.getAdvanceWidth(valueText,size)/2,y,size).toPathData(3)}"/>`;
+  const path=font.getPath(valueText,0,y,size),bounds=path.getBoundingBox();
+  const offset=x-(bounds.x1+bounds.x2)/2;
+  return `<path fill="${color}" d="${font.getPath(valueText,offset,y,size).toPathData(3)}"/>`;
  }
  function lines(value,size){
   const rows=[];let row='';
@@ -26,7 +28,7 @@ async function formalCertificateSVG(c,{preview=false}={}){
  for(let row=0;row<count;row++)for(let col=0;col<count;col++)if(qr.isDark(row,col))dots+=`M${(col+4)*cell} ${(row+4)*cell}h${cell}v${cell}h-${cell}z`;
  const fields=text(c.name,nameFont,center,426.38,58.78,'#0b8036',650)
   +rows.map((row,i)=>text(row,bodyFont,center,455.43+i*22.41,size)).join('')
-  +`<g transform="translate(${center-32} 518.5)"><rect width="64" height="64" fill="white"/><path d="${dots}" fill="#101b23"/></g>`
+  +`<g transform="translate(${center-32} 518.5)"><path d="${dots}" fill="#101b23"/></g>`
   +text('Credential ID: '+c.id,smallFont,center,601.49,8,'#252525',290)
   +text('Issued '+labelDate(c.dateIssued),smallFont,center,615,7,'#524f4d',280)
   +(preview?text('SAMPLE — NOT ISSUED',smallFont,center,630,7,'#524f4d',280):'');
