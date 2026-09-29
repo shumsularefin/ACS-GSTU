@@ -93,9 +93,30 @@
 .editor-page .section-toggle::before{content:'▸';display:block;flex:0 0 28px;width:28px;height:36px;font:32px/36px sans-serif;color:#323fa0;border:0;border-radius:0;background:none;text-align:center}
 .editor-page .section-toggle[aria-expanded="true"]::before{content:'▾'}
 @property --registration-angle{syntax:'<angle>';initial-value:0deg;inherits:false}
-.home-page .hero-registration{position:relative;isolation:isolate;display:inline-flex;flex-direction:row;justify-content:center;align-items:center;width:auto;max-width:100%;min-height:58px;padding:16px 30px;border:1px solid #85fff599;border-radius:999px;background:#ffffff18;backdrop-filter:blur(10px);color:white;box-shadow:0 0 20px #60eee833;font:600 15px/1.4 Poppins,sans-serif;text-align:center}
-.home-page .hero-registration::before{content:'';position:absolute;inset:-1px;border-radius:inherit;padding:2px;background:conic-gradient(from var(--registration-angle),transparent 70%,#67fff0 88%,#fff 96%,transparent);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask-composite:exclude;pointer-events:none;animation:registration-orbit 5s linear infinite}
+.home-page .hero-registration{position:relative;isolation:isolate;display:inline-flex;flex-direction:row;justify-content:center;align-items:center;width:auto;max-width:100%;min-height:58px;padding:16px 30px;border:1px solid #85fff599;border-radius:999px;background:#ffffff18;overflow:hidden;color:white;box-shadow:0 0 20px #60eee833;font:600 15px/1.4 Poppins,sans-serif;text-align:center}
+.home-page .hero-registration::before{content:none}
+.home-page .registration-orbit{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;fill:none;stroke:#adfff6;stroke-width:2}
+.home-page .registration-orbit rect{stroke-dasharray:18 82;animation:registration-orbit 5s linear infinite}
 .home-page .hero-registration:hover,.home-page .hero-registration:focus-visible{background:#ffffff2e;box-shadow:0 0 28px #60eee866}
-@keyframes registration-orbit{to{--registration-angle:360deg}}
-@media(prefers-reduced-motion:reduce){.home-page .hero-registration::before{animation:none}}
+@keyframes registration-orbit{to{stroke-dashoffset:-100}}
+@media(prefers-reduced-motion:reduce){.home-page .registration-orbit rect{animation:none}}
 @media(max-width:760px){.home-page .hero-registration{padding:14px 22px;font-size:14px;min-height:54px}}
+
+/* Keep the mobile masthead on one row and the hero inside the viewport. */
+@media(max-width:760px){
+ .navbar{display:flex;flex-wrap:nowrap;justify-content:space-between;padding:20px 24px;gap:20px}
+ .navbar .left{display:none}.navbar .logo{margin:0}.navbar .logo a{float:none}
+ .navbar .logo img.official-acs-logo{width:112px;max-height:36px}
+ .navbar .right{width:auto;margin-left:auto}.navbar .right ul{display:none}
+ .navbar .right .hamburger-menu{display:flex;align-items:center;gap:10px;margin:0;padding:6px 0;white-space:nowrap}
+ .navbar .right .hamburger-menu b{margin:0}.navbar .right .hamburger-menu .hamburger{float:none;margin:0}
+ .home-page .header{height:100svh;min-height:540px}
+ .home-page .swiper-slider .swiper-slide .slide-inner{padding:90px 0 100px}
+ .home-page .swiper-slider .swiper-slide .slide-inner .container{width:100%;padding:0 24px}
+ .home-page .swiper-slider .swiper-slide .slide-inner .container h1{float:none;font-size:14.5vw;line-height:1.06;margin:12px 0 0}
+ .home-page .swiper-slider .swiper-slide .slide-inner .container h1 span{margin:0;transform:none}
+ .home-page .swiper-slider .swiper-slide .slide-inner .container .tagline h6{float:none;font-size:13px;line-height:1.5}
+ .home-page .hero-actions{margin-top:28px}.home-page .hero-registration{font-size:13px;padding:14px 20px}
+ .home-page .scroll-down,.home-page .sound{display:none}
+ .home-page .swiper-slider .swiper-slide .slide-inner:after{display:none}
+}
