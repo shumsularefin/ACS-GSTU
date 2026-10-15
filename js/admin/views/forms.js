@@ -111,7 +111,7 @@ function readBuilder(form) {
     eventId: val('eventId'),
     fields,
     payment: {
-      enabled: el.payEnabled.checked,
+      enabled: el.payEnabled.value === '1',
       amount: val('payAmount'),
       instructions: val('payInstructions'),
       accounts: $$('[data-account]', form).map((row) => ({
@@ -214,6 +214,16 @@ async function startNew(app) {
 
 // ------------------------------------------------------------------ builder
 
+/** What visitors see right now, for the saved (published) version of the form. */
+function websiteLine(entry) {
+  if (!entry) return 'Not saved yet. Choose Publish to save the form; it stays off the website while its status is Hidden.';
+  const state = formState(entry.value);
+  if (state === 'draft') return 'On the website: <strong>hidden</strong>. Set Status to Open and Publish to start taking answers.';
+  if (state === 'open') return 'On the website: <strong>accepting responses</strong>.';
+  if (state === 'scheduled') return `On the website: <strong>opens ${h(bdLabel(entry.value.opensAt))}</strong>.`;
+  return 'On the website: <strong>not accepting responses</strong>.';
+}
+
 const option = (value, label, current) => `<option value="${h(value)}"${value === current ? ' selected' : ''}>${h(label)}</option>`;
 const tabs = (entry, active) =>
   entry
@@ -299,8 +309,8 @@ function renderBuilder(root, app, entry, name) {
         <section class="ed-fb-block">
           <h4>Availability</h4>
           <div class="ed-grid">
-            <label class="ed-field"><span class="ed-label">Status</span><select name="status">${option('draft', 'Draft: not on the website', v.status)}${option('open', 'Open: accepting responses', v.status)}${option('closed', 'Closed: no more responses', v.status)}</select></label>
-            <span></span>
+            <label class="ed-field"><span class="ed-label">Status</span><select name="status">${option('draft', 'Hidden: not on the website yet', v.status)}${option('open', 'Open: accepting responses', v.status)}${option('closed', 'Closed: no more responses', v.status)}</select></label>
+            <p class="ed-fb-website">${websiteLine(entry)}</p>
             <label class="ed-field"><span class="ed-label">Opens <em>(optional)</em></span><input type="datetime-local" name="opensAt" value="${h(v.opensAt)}"><small>Bangladesh time. Leave blank to open as soon as the status is Open.</small></label>
             <label class="ed-field"><span class="ed-label">Closes <em>(optional)</em></span><input type="datetime-local" name="closesAt" value="${h(v.closesAt)}"><small>Bangladesh time. Responses stop automatically at this time.</small></label>
           </div>
@@ -308,16 +318,12 @@ function renderBuilder(root, app, entry, name) {
 
         <section class="ed-fb-block">
           <h4>Questions <span class="ed-count">${v.fields.filter((f) => !answerless(f)).length}</span></h4>
-          <div class="ed-fb-questions">${v.fields.map((f, i) => questionCard(f, i, v.fields, editable)).join('')}</div>
-          ${editable ? `<div class="ed-actions ed-fb-add"><button type="button" class="ed-btn" data-add="short">+ Question</button><button type="button" class="ed-btn ed-btn-quiet" data-add="section">+ Section heading</button></div>` : ''}
-        </section>
-
-        <section class="ed-fb-block">
-          <h4>Payment</h4>
-          <label class="ed-check"><input type="checkbox" name="payEnabled" data-rerender${v.payment.enabled ? ' checked' : ''}> Ask for a payment (bKash, Nagad, Rocket or bank transfer) and a transaction ID</label>
+          <div class="ed-fb-questions">${v.fields.map((f, i) => questionCard(f, i, v.fields, editable)).join('')}
+          <input type="hidden" name="payEnabled" value="${v.payment.enabled ? '1' : ''}">
           ${
             v.payment.enabled
-              ? `<div class="ed-grid">
+              ? `<div class="ed-fb-q ed-fb-pay"><div class="ed-fb-q-head"><span class="ed-fb-num" aria-hidden="true">৳</span><strong>Payment section</strong><span class="ed-muted">bKash, Nagad, Rocket or bank transfer, with the transaction ID</span>${editable ? '<div class="ed-fb-q-tools"><button type="button" class="ed-icon-btn ed-icon-danger" data-remove-payment aria-label="Remove the payment section">✕</button></div>' : ''}</div>
+                <div class="ed-grid">
                   <label class="ed-field"><span class="ed-label">Amount</span><input name="payAmount" value="${h(v.payment.amount)}" maxlength="120" placeholder="e.g. 300 BDT"></label>
                   <label class="ed-field ed-wide"><span class="ed-label">Instructions <em>(optional)</em></span><textarea name="payInstructions" rows="2" maxlength="1000">${h(v.payment.instructions)}</textarea></label>
                 </div>
@@ -345,9 +351,10 @@ function renderBuilder(root, app, entry, name) {
                       </div>`
                     : ''
                 }
-                <p class="ed-muted">Each transaction ID is accepted once, so the same payment cannot be used for two registrations. Mark payments as checked under Responses.</p>`
+                <p class="ed-muted">Each transaction ID is accepted once, so the same payment cannot be used for two registrations. Mark payments as checked under Responses.</p></div>`
               : ''
-          }
+          }</div>
+          ${editable ? `<div class="ed-actions ed-fb-add"><button type="button" class="ed-btn" data-add="short">+ Question</button><button type="button" class="ed-btn ed-btn-quiet" data-add="section">+ Section heading</button>${v.payment.enabled ? '' : '<button type="button" class="ed-btn ed-btn-quiet" data-add-payment>+ Payment section</button>'}</div>` : ''}
         </section>
 
         <section class="ed-fb-block">
@@ -362,7 +369,7 @@ function renderBuilder(root, app, entry, name) {
         <div class="ed-actions ed-form-actions">
           <button type="button" class="ed-btn" data-preview>Preview</button>
           ${entry ? '<button type="button" class="ed-btn" data-share>Link &amp; QR code</button>' : ''}
-          ${entry && v.eventId && app.perms.events ? '<button type="button" class="ed-btn ed-btn-quiet" data-link-event>Use as the event’s registration link</button>' : ''}
+          ${entry && v.eventId && app.perms.events ? '<button type="button" class="ed-btn ed-btn-quiet" data-link-event>Use as the event’s registration form</button>' : ''}
           ${entry && v.kind === 'member' && app.perms.membership ? '<button type="button" class="ed-btn ed-btn-quiet" data-link-membership>Use for “Join now” on the homepage</button>' : ''}
           ${entry && app.perms.deleteForms ? '<button type="button" class="ed-btn ed-btn-danger-quiet" data-delete>Delete form</button>' : ''}
         </div>
@@ -434,6 +441,15 @@ function renderBuilder(root, app, entry, name) {
         if (value.payment.skipIf?.field === removed.id) value.payment.skipIf = null;
       });
       toast('Question removed. Answers already received to it stay in the responses.', { type: 'info' });
+    } else if ('removePayment' in button.dataset) {
+      change((value) => (value.payment.enabled = false));
+      toast('Payment section removed. Add it back with + Payment section.', { type: 'info' });
+    } else if ('addPayment' in button.dataset) {
+      change((value) => {
+        value.payment.enabled = true;
+        if (!value.payment.accounts.length) value.payment.accounts.push({ method: 'bkash', number: '', note: 'Personal' });
+        if (!value.payment.instructions) value.payment.instructions = 'Send the fee with Send Money, then enter your transaction ID below.';
+      });
     } else if ('addAccount' in button.dataset) {
       change((value) => value.payment.accounts.push({ method: 'nagad', number: '', note: '' }));
     } else if (button.dataset.removeAccount) {
@@ -454,17 +470,13 @@ function renderBuilder(root, app, entry, name) {
     const event = app.data.events.find((e) => e.value.id === entry.value.eventId);
     if (!event) return toast('The linked event no longer exists.', { type: 'error' });
     const base = app.drafts.get(`event:${event.value.id}`)?.value || formFromEvent(event.value);
-    app.drafts.set(
-      `event:${event.value.id}`,
-      { ...base, registrationUrl: formLink(entry.value.id), registrationStatus: 'open' },
-      event.revision,
-    );
+    app.drafts.set(`event:${event.value.id}`, { ...base, registrationFormId: entry.value.id }, event.revision);
     app.navigate('events', [event.value.id]);
-    toast('The registration link is set in a draft of the event. Check it, then Publish.', { type: 'info' });
+    toast('The form is chosen as the registration form in a draft of the event. Check it, then Publish.', { type: 'info' });
   });
   $('[data-link-membership]', form)?.addEventListener('click', () => {
     const base = app.drafts.get('membership')?.value || membershipValues(app.data.membership?.value || {});
-    app.drafts.set('membership', { ...base, applicationUrl: formLink(entry.value.id) }, app.data.membership?.revision || 0);
+    app.drafts.set('membership', { ...base, applicationFormId: entry.value.id }, app.data.membership?.revision || 0);
     app.navigate('membership');
     toast('“Join now” now points to this form in a draft. Check it, then Publish.', { type: 'info' });
   });

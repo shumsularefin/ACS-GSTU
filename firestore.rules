@@ -109,7 +109,8 @@ service cloud.firestore {
     function shortText(v, max) { return v is string && v.size() <= max; }
     function eventFields(e, id) {
       return e.keys().hasOnly(['id', 'title', 'date', 'category', 'image', 'description', 'location', 'registrationUrl',
-             'registrationStatus', 'sourceUrl', 'startsAt', 'endsAt', 'createdBy', 'revision', 'updatedAt', 'updatedBy', 'auditId'])
+             'registrationStatus', 'registrationFormId', 'surveyFormId', 'sourceUrl', 'startsAt', 'endsAt', 'createdBy', 'revision',
+             'updatedAt', 'updatedBy', 'auditId'])
         && e.id == id && id.matches('^[a-z0-9]+(-[a-z0-9]+)*$') && id.size() <= 80
         && e.title is string && e.title.size() > 0 && e.title.size() <= 200
         && e.date is string && e.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
@@ -118,6 +119,7 @@ service cloud.firestore {
         && shortText(e.image, 2000) && shortText(e.location, 300)
         && e.registrationStatus in ['unpublished', 'open', 'closed'] && shortText(e.registrationUrl, 2000)
         && shortText(e.sourceUrl, 2000) && shortText(e.startsAt, 35) && shortText(e.endsAt, 35)
+        && shortText(e.get('registrationFormId', ''), 80) && shortText(e.get('surveyFormId', ''), 80)
         && e.createdBy is string;
     }
 
@@ -138,11 +140,12 @@ service cloud.firestore {
     }
     function membershipFields(d) {
       return d.keys().hasOnly(['intro', 'eligibility', 'general', 'premium', 'renewal', 'benefits', 'applicationUrl',
-             'renewalUrl', 'contactEmail'].concat(pageMeta()))
+             'renewalUrl', 'contactEmail', 'applicationFormId', 'renewalFormId'].concat(pageMeta()))
         && shortText(d.intro, 5000) && shortText(d.eligibility, 5000) && shortText(d.general, 5000)
         && shortText(d.premium, 5000) && shortText(d.renewal, 5000)
         && d.benefits is list && d.benefits.size() <= 30
-        && shortText(d.applicationUrl, 2000) && shortText(d.renewalUrl, 2000) && shortText(d.contactEmail, 200);
+        && shortText(d.applicationUrl, 2000) && shortText(d.renewalUrl, 2000) && shortText(d.contactEmail, 200)
+        && shortText(d.get('applicationFormId', ''), 80) && shortText(d.get('renewalFormId', ''), 80);
     }
 
     match /pages/{page} {

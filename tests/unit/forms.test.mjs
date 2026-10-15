@@ -143,3 +143,54 @@ test('the public form shows payment accounts and escapes text', () => {
   assert.ok(html.includes('name="payment_txn"'));
   assert.ok(renderForm({ ...form, status: 'closed' }).includes('no longer accepting'));
 });
+
+test('linked website forms drive the register, feedback and join buttons', async () => {
+  const { normalizeEvent, normalizeMembership, eventOpen } = await import('../../js/lib/content-model.js');
+  const { renderEvent, renderMembership, renderOpenEvent } = await import('../../js/lib/content-render.js');
+  const now = new Date('2026-11-01T06:00:00Z');
+  const forms = [
+    {
+      id: 'workshop-reg',
+      title: 'Workshop registration',
+      kind: 'event',
+      status: 'open',
+      opensAt: '',
+      closesAt: '2026-11-05T12:00:00.000Z',
+    },
+    { id: 'workshop-feedback', title: 'Workshop feedback', kind: 'feedback', status: 'open', opensAt: '', closesAt: '' },
+    { id: 'join', title: 'Member registration', kind: 'member', status: 'open', opensAt: '', closesAt: '' },
+    { id: 'later', title: 'Later', kind: 'event', status: 'open', opensAt: '2026-12-01T00:00:00.000Z', closesAt: '' },
+  ];
+  const base = { id: 'workshop', title: 'Workshop', date: '2026-11-10', category: 'development', description: 'Hands-on.' };
+  // Registration is optional: no form and no status means no registration block at all.
+  const plain = normalizeEvent(base);
+  assert.equal(plain.registrationFormId, '');
+  assert.ok(!renderEvent({ events: [plain], forms }, 'workshop', { now }).includes('event-status'));
+  const linked = normalizeEvent({ ...base, registrationFormId: 'workshop-reg', surveyFormId: 'workshop-feedback' });
+  assert.equal(eventOpen(linked, now, forms), true, 'the form decides, not the registration status');
+  const page = renderEvent({ events: [linked], forms }, 'workshop', { now });
+  assert.ok(page.includes('href="form.html?id=workshop-reg" data-form="workshop-reg"'));
+  assert.ok(page.includes('Registration closes'));
+  assert.ok(page.includes('data-form="workshop-feedback"') && page.includes('Share your feedback'));
+  const scheduled = normalizeEvent({ ...base, registrationFormId: 'later' });
+  assert.equal(eventOpen(scheduled, now, forms), false);
+  assert.ok(renderEvent({ events: [scheduled], forms }, 'workshop', { now }).includes('Registration opens'));
+  assert.throws(() => normalizeEvent({ ...base, registrationFormId: 'Not An ID' }), /form/);
+
+  const membership = normalizeMembership({
+    intro: 'Join',
+    eligibility: 'Students',
+    general: 'General',
+    premium: 'Premium',
+    renewal: 'Renew',
+    benefits: ['Friends'],
+    applicationUrl: 'https://forms.gle/old',
+    applicationFormId: 'join',
+    contactEmail: 'chapter@example.com',
+  });
+  const home = renderMembership({ membership, forms }, now);
+  assert.ok(home.includes('data-form="join"') && !home.includes('forms.gle'), 'the website form replaces the old link');
+  const pills = renderOpenEvent({ events: [linked], membership, forms }, now);
+  assert.ok(pills.includes('Explore new event') && pills.includes('Member registration is open'));
+  assert.ok(!renderOpenEvent({ events: [], membership, forms: [{ ...forms[2], status: 'closed' }] }, now).includes('Member registration'));
+});

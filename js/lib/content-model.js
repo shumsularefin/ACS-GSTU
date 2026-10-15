@@ -1,5 +1,6 @@
 // Shared content model: validation and normalization used by the build, the public
 // pages and the Chapter Editor. Everything here runs in both Node and the browser.
+import { formState } from './form-model.js';
 
 export const categories = {
   all: 'All events',
@@ -48,6 +49,13 @@ export function safeURL(value, image = false) {
   return url;
 }
 
+/** A website form's address (forms/{id}), or '' when none is linked. */
+function formRef(value) {
+  const id = text(value, 80, 'Form');
+  if (id && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(id)) throw Error('Choose a form from the list.');
+  return id;
+}
+
 export function validDate(value) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
 }
@@ -77,6 +85,8 @@ export function normalizeEvent(raw) {
     location: text(raw.location, 300, 'Location'),
     registrationUrl: safeURL(raw.registrationUrl),
     registrationStatus: text(raw.registrationStatus || 'unpublished', 20),
+    registrationFormId: formRef(raw.registrationFormId),
+    surveyFormId: formRef(raw.surveyFormId),
     sourceUrl: safeURL(raw.sourceUrl),
     startsAt: text(raw.startsAt, 35),
     endsAt: text(raw.endsAt, 35),
@@ -151,9 +161,37 @@ export function eventPast(e, now = new Date()) {
   return eventEndDate(e) < todayInBangladesh(now);
 }
 
-/** Open for registration and not yet finished. The registration link itself is optional. */
-export function eventOpen(e, now = new Date()) {
-  return e.registrationStatus === 'open' && !eventPast(e, now);
+// ------------------------------------------------------------------ linked website forms
+
+/** What public pages need to know about a form: its title, type and when it accepts answers. */
+export function normalizeFormSummary(raw) {
+  const iso = (v) => (v ? new Date(v).toISOString() : '');
+  const f = {
+    id: formRef(raw.id),
+    title: text(raw.title, 200, 'Form title'),
+    kind: text(raw.kind, 20),
+    status: ['draft', 'open', 'closed'].includes(raw.status) ? raw.status : 'draft',
+    opensAt: iso(raw.opensAt),
+    closesAt: iso(raw.closesAt),
+  };
+  if (!f.id || !f.title) throw Error('Incomplete form.');
+  return f;
+}
+export const findForm = (forms, id) => (id ? (forms || []).find((f) => f.id === id) || null : null);
+/** 'none' when nothing (or a removed or hidden form) is linked; otherwise the form's state. */
+export function linkedFormState(forms, id, now = new Date()) {
+  const form = findForm(forms, id);
+  return !form || form.status === 'draft' ? 'none' : formState(form, now);
+}
+
+/**
+ * Open for registration and not yet finished. With a website form linked, the form's status and
+ * opening times decide; otherwise the event's registration status does (the link is optional).
+ */
+export function eventOpen(e, now = new Date(), forms = []) {
+  if (eventPast(e, now)) return false;
+  const state = linkedFormState(forms, e.registrationFormId, now);
+  return state === 'none' ? e.registrationStatus === 'open' : state === 'open';
 }
 
 export function newRosterKey() {
@@ -219,6 +257,8 @@ export function normalizeMembership(raw) {
   if (m.benefits.length > 30) throw Error('List up to 30 membership benefits.');
   m.applicationUrl = safeURL(raw.applicationUrl);
   m.renewalUrl = safeURL(raw.renewalUrl);
+  m.applicationFormId = formRef(raw.applicationFormId);
+  m.renewalFormId = formRef(raw.renewalFormId);
   m.contactEmail = text(raw.contactEmail, 200, 'Contact email');
   if (!/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(m.contactEmail)) throw Error('Enter a valid chapter contact email.');
   return m;
@@ -262,7 +302,21 @@ export function normalizeContent(raw, options = {}) {
     homepage: normalizeHomepage(raw.homepage),
     membership: normalizeMembership(raw.membership),
     team: normalizeTeam(raw.team, options),
+    forms: normalizeForms(raw.forms),
   };
+}
+
+/** Form summaries; one broken form never hides the others. */
+export function normalizeForms(list) {
+  const result = [];
+  for (const raw of Array.isArray(list) ? list : []) {
+    try {
+      result.push(normalizeFormSummary(raw));
+    } catch {
+      /* Skipped. */
+    }
+  }
+  return result;
 }
 
 /** Removes everything private (membership IDs) from content. */

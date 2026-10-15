@@ -11,6 +11,7 @@ import {
   normalizePerson,
   normalizeRosterMember,
   normalizeContent,
+  normalizeForms,
   newRosterKey,
 } from './content-model.js';
 
@@ -30,12 +31,13 @@ function lenient(list, normalize, label, warn) {
   return result;
 }
 
-export function contentFromDocuments({ events = [], homepage, membership, team = [] }, { warn = () => {}, fallback } = {}) {
+export function contentFromDocuments({ events = [], homepage, membership, team = [], forms = [] }, { warn = () => {}, fallback } = {}) {
   const content = {
     events: lenient(events.map(stripMeta), normalizeEvent, 'event', warn),
     homepage: normalizeHomepage(stripMeta(homepage) || {}),
     membership: null,
     team: { founders: [], committees: {} },
+    forms: normalizeForms(forms),
   };
   try {
     content.membership = normalizeMembership(stripMeta(membership));
@@ -90,13 +92,18 @@ export async function loadPublished(rest, options = {}) {
     throw error;
   });
   if (meta) {
-    const [events, homepage, membership, team] = await Promise.all([
+    const [events, homepage, membership, team, forms] = await Promise.all([
       rest.list('events'),
       rest.get('pages/homepage'),
       rest.get('pages/membership'),
       rest.list('team'),
+      // Security rules older than the forms feature refuse this list; the site then shows no forms.
+      rest.list('forms').catch(() => []),
     ]);
-    const content = contentFromDocuments({ events: events.map((d) => d.data), homepage, membership, team }, options);
+    const content = contentFromDocuments(
+      { events: events.map((d) => d.data), homepage, membership, team, forms: forms.map((d) => d.data) },
+      options,
+    );
     return { layout: 'split', revision: meta.revision, content };
   }
   const legacy = await rest.get('siteContent/published');

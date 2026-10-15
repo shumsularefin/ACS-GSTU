@@ -1,10 +1,10 @@
-// Public form page (form.html?id=…): shows a form built in the Chapter Editor and stores the answers.
+// Shows a form built in the Chapter Editor and stores the answers: on form.html?id=…, or inside
+// the pop-up that opens from Register, Join and feedback buttons (form-popup.js).
 import { rest } from './site-data.js';
 import { renderForm } from '../lib/form-render.js';
 import { checkAnswers, responseId, fieldVisible, paymentRequired, PAYMENT_FIELDS, formState } from '../lib/form-model.js';
 import { escapeHTML as h } from '../lib/content-model.js';
 
-const root = document.getElementById('form-root');
 
 function readRaw(form) {
   const raw = {};
@@ -58,14 +58,18 @@ function showErrors(form, errors) {
   }
 }
 
-function done(definition) {
-  root.innerHTML = `<div class="pf pf-done" tabindex="-1"><span class="pf-done-icon" aria-hidden="true">✓</span><h1>${h(definition.title)}</h1><p>${h(definition.confirmation)}</p><a class="btn btn-outline" href="index.html">Back to the website</a></div>`;
+function done(root, definition, inDialog) {
+  const back = inDialog
+    ? '<button type="button" class="btn btn-outline" data-close-form>Close</button>'
+    : '<a class="btn btn-outline" href="index.html">Back to the website</a>';
+  root.innerHTML = `<div class="pf pf-done" tabindex="-1"><span class="pf-done-icon" aria-hidden="true">✓</span><h1>${h(definition.title)}</h1><p>${h(definition.confirmation)}</p>${back}</div>`;
   root.firstElementChild.focus();
-  window.scrollTo({ top: 0 });
+  if (inDialog) root.closest('dialog')?.scrollTo({ top: 0 });
+  else window.scrollTo({ top: 0 });
 }
 
-async function start() {
-  const id = new URLSearchParams(location.search).get('id') || '';
+/** Loads form `id` into `root` and handles answering it. */
+export async function mountForm(root, id, { inDialog = false } = {}) {
   if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(id)) {
     root.innerHTML = '<div class="pf"><h1>Form not found</h1><p>Check the link you were given.</p></div>';
     return;
@@ -81,7 +85,7 @@ async function start() {
     root.innerHTML = '<div class="pf"><h1>Form not found</h1><p>It may have been removed. Check the link you were given.</p></div>';
     return;
   }
-  document.title = `${definition.title} | ACS Student Chapter, GSTU`;
+  if (!inDialog) document.title = `${definition.title} | ACS Student Chapter, GSTU`;
   root.innerHTML = renderForm(definition);
   const form = root.querySelector('form');
   if (!form) return;
@@ -122,7 +126,7 @@ async function start() {
       return;
     }
     // Automated sign-ups fill the hidden field; they get the normal message and nothing is stored.
-    if (form.elements.pf_website.value) return done(definition);
+    if (form.elements.pf_website.value) return done(root, definition, inDialog);
     button.disabled = true;
     button.textContent = 'Submitting…';
     try {
@@ -133,7 +137,7 @@ async function start() {
         status.textContent = 'This transaction ID has already been used.';
         return;
       }
-      done(definition);
+      done(root, definition, inDialog);
     } catch (error) {
       if (error.status === 403 && paymentRequired(definition, raw) && formState(definition) === 'open') {
         // The database may report a reused transaction ID as a refusal rather than a duplicate.
@@ -153,4 +157,3 @@ async function start() {
   });
 }
 
-if (root) start();

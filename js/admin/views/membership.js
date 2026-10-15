@@ -1,8 +1,21 @@
 import { $ } from '../ui.js';
 import { field, formValues, fillForm } from '../ui.js';
 import { statusHTML, wireStatus, refreshStatus, autosave, showProblem } from '../section.js';
+import { formSelect, keepMissing } from '../form-select.js';
 
-const KEYS = ['intro', 'benefits', 'eligibility', 'general', 'premium', 'renewal', 'applicationUrl', 'renewalUrl', 'contactEmail'];
+const KEYS = [
+  'intro',
+  'benefits',
+  'eligibility',
+  'general',
+  'premium',
+  'renewal',
+  'applicationFormId',
+  'renewalFormId',
+  'applicationUrl',
+  'renewalUrl',
+  'contactEmail',
+];
 export const pick = (v) => Object.fromEntries(KEYS.map((k) => [k, Array.isArray(v[k]) ? v[k].join('\n') : String(v[k] ?? '')]));
 
 export const membershipView = {
@@ -24,13 +37,18 @@ export const membershipView = {
           ${field({ label: 'General membership', name: 'general', type: 'textarea', attrs: 'required rows="3"', hint: 'Fees and what is included.' })}
           ${field({ label: 'Premium membership', name: 'premium', type: 'textarea', attrs: 'required rows="3"', hint: 'Fees and what is included.' })}
           ${field({ label: 'Renewal instructions', name: 'renewal', type: 'textarea', attrs: 'required rows="3"', wide: true })}
-          ${field({ label: 'Application form link', name: 'applicationUrl', type: 'url', optional: true, hint: 'Without a link, “Join now” opens an email to the chapter.' })}
-          ${field({ label: 'Renewal form link', name: 'renewalUrl', type: 'url', optional: true })}
+          ${formSelect(app, { label: '“Join now” form', name: 'applicationFormId', none: 'No website form', prefer: 'member', hint: 'Opens in a pop-up on the homepage. While it is open, the homepage also shows a “Member registration is open” button. Build forms under <a href="#forms">Forms</a>.' })}
+          ${formSelect(app, { label: '“Renew membership” form', name: 'renewalFormId', none: 'No website form', prefer: 'member' })}
+          ${field({ label: 'Outside application link', name: 'applicationUrl', type: 'url', optional: true, hint: 'Only used when no website form is chosen. Without either, “Join now” opens an email to the chapter.' })}
+          ${field({ label: 'Outside renewal link', name: 'renewalUrl', type: 'url', optional: true, hint: 'Only used when no renewal form is chosen.' })}
           ${field({ label: 'Chapter contact email', name: 'contactEmail', type: 'email', attrs: 'required' })}
         </div></form>
       </section>`;
     const form = $('form', root);
-    fillForm(form, app.drafts.get(name)?.value || live);
+    const values = app.drafts.get(name)?.value || live;
+    fillForm(form, values);
+    keepMissing(form.elements.applicationFormId, values.applicationFormId);
+    keepMissing(form.elements.renewalFormId, values.renewalFormId);
     wireStatus(root, app);
     showProblem(app, name, form);
     autosave(form, app, name, {

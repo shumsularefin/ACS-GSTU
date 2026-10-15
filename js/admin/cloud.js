@@ -44,6 +44,11 @@ export class ConflictError extends Error {
   }
 }
 
+// Form links are left out when empty, so events and membership still save under security rules
+// published before form links existed.
+const LINK_FIELDS = ['registrationFormId', 'surveyFormId', 'applicationFormId', 'renewalFormId'];
+const withoutEmptyLinks = (data) => Object.fromEntries(Object.entries(data).filter(([k, v]) => !(LINK_FIELDS.includes(k) && !v)));
+
 export function editorEmail(value) {
   const email = String(value || '')
     .trim()
@@ -217,7 +222,7 @@ export function createCloud({ db, auth }) {
         target: event.id,
         detail: `${event.title} · ${event.date}`,
         baseRevision,
-        data: (snap) => ({ ...event, createdBy: snap.exists() ? snap.data().createdBy : uid() }),
+        data: (snap) => ({ ...withoutEmptyLinks(event), createdBy: snap.exists() ? snap.data().createdBy : uid() }),
       });
     },
     deleteEvent(event) {
@@ -234,7 +239,7 @@ export function createCloud({ db, auth }) {
         target: name,
         detail: name === 'homepage' ? `${value.images.length} homepage image(s)` : 'Membership information updated',
         baseRevision,
-        data: () => value,
+        data: () => withoutEmptyLinks(value),
       });
     },
     /** Saves a team year: public names/roles/tiers, and (for annual rosters) the private membership IDs. */
@@ -280,7 +285,7 @@ export function createCloud({ db, auth }) {
           const snap = snaps[i];
           const auditId = audit(tx, snap.exists() ? 'event.update' : 'event.create', e.id, `Imported: ${e.title} · ${e.date}`);
           tx.set(doc(db, 'events', e.id), {
-            ...e,
+            ...withoutEmptyLinks(e),
             createdBy: snap.exists() ? snap.data().createdBy : uid(),
             revision: (snap.exists() ? snap.data().revision || 0 : 0) + 1,
             ...stamp(auditId),

@@ -262,7 +262,7 @@
 .ed-toast-error { border-left-color: #ff8a80; }
 .ed-toast-info { border-left-color: #b9c3ff; }
 .ed-toast button { background: none; border: 0; color: #fff; font-size: 20px; line-height: 1; cursor: pointer; padding: 0 2px; }
-.ed-top { position: fixed; z-index: 1500; left: 20px; bottom: 20px; padding: 10px 14px; border-radius: 999px; border: 1px solid var(--ed-line); background: #fff; color: var(--ed-blue); font: 600 14px Poppins, sans-serif; box-shadow: var(--ed-shadow); cursor: pointer; }
+.ed-top { position: fixed; z-index: 1500; right: 20px; bottom: 20px; padding: 10px 14px; border-radius: 999px; border: 1px solid var(--ed-line); background: #fff; color: var(--ed-blue); font: 600 14px Poppins, sans-serif; box-shadow: var(--ed-shadow); cursor: pointer; }
 
 @media (max-width: 1100px) {
   .ed-split { grid-template-columns: minmax(0, 1fr); }
@@ -293,7 +293,7 @@
   .ed-signin-card { padding: 28px 20px; }
   .ed-details { grid-template-columns: 1fr; gap: 2px; }
   .ed-details dd { margin-bottom: 8px; }
-  .ed-top { left: auto; right: 16px; bottom: 84px; }
+  .ed-top { right: 16px; bottom: 84px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .ed * { transition: none !important; }
@@ -354,3 +354,11 @@
 .ed-fb-answers dt { color: var(--ed-muted); font-size: 14px; }
 .ed-fb-answers dd { margin: 0; white-space: pre-wrap; word-break: break-word; }
 .ed-fb-verify { margin-top: 16px; padding: 12px 14px; border-radius: var(--ed-radius); background: var(--ed-bg); }
+.ed-subsection { border: 1px solid var(--ed-line); border-radius: var(--ed-radius); padding: 14px 16px 6px; margin: 4px 0; min-width: 0; }
+.ed-subsection legend { padding: 0 6px; font-weight: 600; font-size: 15px; }
+.ed-subsection legend em { font-weight: 400; color: var(--ed-muted); font-style: normal; }
+.ed-subsection > p { margin: 0 0 12px; font-size: 14px; }
+.ed-subsection [data-outside][hidden] { display: none; }
+.ed-fb-pay { border: 1.5px solid var(--ed-blue); }
+.ed-fb-pay .ed-fb-q-head .ed-muted { font-size: 13px; }
+.ed-fb-website { align-self: end; margin: 0 0 10px; padding: 10px 12px; border-radius: var(--ed-radius); background: var(--ed-bg); font-size: 14px; }

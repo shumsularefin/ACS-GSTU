@@ -1,3 +1,4 @@
+import { formSummaries } from '../form-select.js';
 import { h, busy, when } from '../ui.js';
 import { roleInfo } from '../permissions.js';
 import { eventOpen, eventPast } from '../../lib/content-model.js';
@@ -11,7 +12,7 @@ export const overviewView = {
   render(root, app) {
     const { perms, data, drafts } = app;
     const events = data.events.map((e) => e.value);
-    const open = events.filter((e) => eventOpen(e));
+    const open = events.filter((e) => eventOpen(e, new Date(), formSummaries(app)));
     const upcoming = events.filter((e) => !eventPast(e)).sort((a, b) => a.date.localeCompare(b.date));
     const names = drafts.names();
     const actions = [
@@ -41,7 +42,7 @@ export const overviewView = {
       <div class="ed-columns">
         <section class="ed-card"><h3>Open for registration</h3>${
           open.length
-            ? `<ul class="ed-list">${open.map((e) => `<li><a href="#events/${encodeURIComponent(e.id)}">${h(e.title)}</a><small>${h(eventDateLabel(e))}${e.registrationUrl ? '' : ' · no registration link yet'}</small></li>`).join('')}</ul><p class="ed-muted">The first one is promoted on the homepage with the “Explore new event &amp; register” button.</p>`
+            ? `<ul class="ed-list">${open.map((e) => `<li><a href="#events/${encodeURIComponent(e.id)}">${h(e.title)}</a><small>${h(eventDateLabel(e))}${e.registrationUrl || e.registrationFormId ? '' : ' · no registration form yet'}</small></li>`).join('')}</ul><p class="ed-muted">The first one is promoted on the homepage with the “Explore new event &amp; register” button.</p>`
             : '<p class="ed-muted">No event is open for registration. Set an event’s registration status to Open to promote it on the homepage.</p>'
         }</section>
         <section class="ed-card"><h3>Coming up</h3>${

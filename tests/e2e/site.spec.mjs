@@ -216,9 +216,20 @@ test('an event registration form is built, answered once per transaction, checke
   await expect(owner).toHaveURL(/#forms\/lab-safety-workshop-registration-\d{4}$/);
   formId = decodeURIComponent(owner.url().split('#forms/')[1]);
 
+  // The event chooses the form from a dropdown; the form, not the event, decides when registration is open.
+  await owner.goto('/admin.html#events/science-fair-2027');
+  await owner.locator('form.ed-form [name="registrationFormId"]').selectOption(formId);
+  await expect(owner.locator('[data-outside]')).toBeHidden();
+  await owner.locator('[data-publish-draft]').click();
+  await toast(owner, 'is live');
+
   const visitor = await browser.newPage();
-  const register = async (txn, membership = 'General member') => {
-    await visitor.goto(`/form.html?id=${formId}`);
+  const register = async (txn, membership = 'General member', { popup = false } = {}) => {
+    if (popup) {
+      await visitor.goto('/event.html?id=science-fair-2027');
+      await visitor.getByRole('link', { name: 'Register now' }).click();
+      await expect(visitor.locator('dialog.form-dialog')).toBeVisible();
+    } else await visitor.goto(`/form.html?id=${formId}`);
     await expect(visitor.getByRole('heading', { name: 'Lab Safety Workshop registration' })).toBeVisible();
     await visitor.getByLabel('Full name').fill('Visitor One');
     await visitor.getByLabel('Email address').fill('visitor@example.com');
@@ -235,13 +246,28 @@ test('an event registration form is built, answered once per transaction, checke
     } else await expect(visitor.locator('[data-payment]')).toBeHidden();
     await visitor.getByRole('button', { name: 'Submit' }).click();
   };
-  await register('9AB7CD3EF1');
-  await expect(visitor.getByText('You are registered!')).toBeVisible();
+  await register('9AB7CD3EF1', 'General member', { popup: true });
+  await expect(visitor.locator('dialog.form-dialog').getByText('You are registered!')).toBeVisible();
+  await visitor.locator('dialog.form-dialog').getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(visitor.locator('dialog.form-dialog')).toHaveCount(0);
   await register('9ab7-cd3ef1');
   await expect(visitor.locator('#payment_txn-error')).toContainText('already been used');
   await register('', 'Premium member');
   await expect(visitor.getByText('You are registered!')).toBeVisible();
+
+  // "Join now" opens the chosen website form instead of the old outside link.
+  await owner.goto('/admin.html#membership');
+  await owner.locator('[name="applicationFormId"]').selectOption(formId);
+  await owner.locator('[data-publish-draft]').click();
+  await toast(owner, 'is live');
   await visitor.close();
+  // A new visitor (pages keep the published content for five minutes per browser session).
+  const newcomer = await (await browser.newContext()).newPage();
+  await newcomer.goto('/index.html#membership');
+  await expect(newcomer.locator('.hero-registration-member')).toBeVisible();
+  await newcomer.getByRole('link', { name: 'Join now →' }).click();
+  await expect(newcomer.locator('dialog.form-dialog').getByRole('heading', { name: 'Lab Safety Workshop registration' })).toBeVisible();
+  await newcomer.context().close();
 
   await owner.goto(`/admin.html#forms/${formId}/responses`);
   await expect(owner.locator('.ed-fb-stats')).toContainText('2responses');

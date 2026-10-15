@@ -1,5 +1,21 @@
 // HTML renderers shared by the static build and the browser (fresh content after a publish).
-import { categories, escapeHTML as h, eventOpen, eventPast, googleCalendarURL, calendarICS, validDate, TIMEZONE } from './content-model.js';
+import {
+  categories,
+  escapeHTML as h,
+  eventOpen,
+  eventPast,
+  googleCalendarURL,
+  calendarICS,
+  validDate,
+  TIMEZONE,
+  findForm,
+  linkedFormState,
+} from './content-model.js';
+import { bdLabel } from './form-model.js';
+
+/** A website form opens in a pop-up on the same page (js/public/form-popup.js), or on form.html without JavaScript. */
+export const formHref = (id) => `form.html?id=${encodeURIComponent(id)}`;
+const formLinkAttrs = (id) => `href="${formHref(id)}" data-form="${h(id)}"`;
 
 let imageManifest = {};
 let bakedMedia = {};
@@ -105,13 +121,28 @@ export function renderEvent(data, id, { now = new Date(), inlineCalendar = false
   const e = data.events.find((item) => item.id === id);
   if (!e)
     return '<section class="archive"><h1>Event not found</h1><p>This event has not been published, or its address has changed.</p><a href="activities.html">Back to events</a></section>';
-  const registration = eventPast(e, now)
-    ? '<p class="event-status">This event has ended. Registration is closed.</p>'
-    : eventOpen(e, now) && e.registrationUrl
-      ? `<a class="button" href="${h(e.registrationUrl)}" target="_blank" rel="noopener noreferrer">Register for this event ↗</a>`
-      : e.registrationStatus === 'closed'
-        ? '<p class="event-status">Registration is closed.</p>'
-        : '<p class="event-status">Registration details will be announced here.</p>';
+  const forms = data.forms || [];
+  const regState = linkedFormState(forms, e.registrationFormId, now);
+  const regForm = findForm(forms, e.registrationFormId);
+  let registration;
+  if (eventPast(e, now)) registration = '<p class="event-status">This event has ended. Registration is closed.</p>';
+  else if (regState === 'open')
+    registration = `<div class="event-register"><a class="button" ${formLinkAttrs(regForm.id)}>Register now</a>${regForm.closesAt ? `<p class="event-status">Registration closes ${h(bdLabel(regForm.closesAt))}.</p>` : ''}</div>`;
+  else if (regState === 'scheduled') registration = `<p class="event-status">Registration opens ${h(bdLabel(regForm.opensAt))}.</p>`;
+  else if (regState !== 'none') registration = '<p class="event-status">Registration is closed.</p>';
+  else
+    registration =
+      eventOpen(e, now) && e.registrationUrl
+        ? `<a class="button" href="${h(e.registrationUrl)}" target="_blank" rel="noopener noreferrer">Register for this event ↗</a>`
+        : e.registrationStatus === 'closed'
+          ? '<p class="event-status">Registration is closed.</p>'
+          : e.registrationStatus === 'open'
+            ? '<p class="event-status">Registration details will be announced here.</p>'
+            : '';
+  const survey =
+    linkedFormState(forms, e.surveyFormId, now) === 'open'
+      ? `<a class="button secondary" ${formLinkAttrs(e.surveyFormId)}>Share your feedback</a>`
+      : '';
   const timed = e.startsAt && !validDate(e.startsAt);
   const times = timed
     ? `<dt>Time (Bangladesh)</dt><dd>${h(timeLabel(e.startsAt))} – ${h(timeLabel(e.endsAt))} (UTC+06:00)</dd>`
@@ -120,7 +151,7 @@ export function renderEvent(data, id, { now = new Date(), inlineCalendar = false
     ? `<a class="button secondary" href="data:text/calendar;charset=utf-8,${h(encodeURIComponent(calendarICS(e)))}" download="${e.id}.ics">Download calendar (.ics)</a>`
     : `<a class="button secondary" href="calendar/${e.id}.ics" download>Download calendar (.ics)</a>`;
   const year = e.date.slice(0, 4);
-  return `<article class="event-detail"><a class="back-link" href="${eventsHref(year, e.category)}">← Back to ${categories[e.category].toLowerCase()} events</a><p class="eyebrow">${categories[e.category]} / ${eventDateLabel(e)}</p><h1>${h(e.title)}</h1><div class="detail-grid">${photo(e.image, e.title, 'detail-image')}<div><h2>About the event</h2><p>${h(e.description)}</p><dl><dt>Date</dt><dd><time datetime="${e.date}">${eventDateLabel(e)}</time></dd>${times}<dt>Location</dt><dd>${h(e.location || 'Location not published.')}</dd><dt>Organized by</dt><dd>ACS Student Chapter, GSTU</dd></dl>${registration}<div class="event-actions"><a class="button secondary" href="${h(googleCalendarURL(e))}" target="_blank" rel="noopener noreferrer">Google Calendar ↗</a>${ics}</div>${e.sourceUrl ? `<a href="${h(e.sourceUrl)}" target="_blank" rel="noopener noreferrer">View event coverage ↗</a>` : ''}</div></div></article>`;
+  return `<article class="event-detail"><a class="back-link" href="${eventsHref(year, e.category)}">← Back to ${categories[e.category].toLowerCase()} events</a><p class="eyebrow">${categories[e.category]} / ${eventDateLabel(e)}</p><h1>${h(e.title)}</h1><div class="detail-grid">${photo(e.image, e.title, 'detail-image')}<div><h2>About the event</h2><p>${h(e.description)}</p><dl><dt>Date</dt><dd><time datetime="${e.date}">${eventDateLabel(e)}</time></dd>${times}<dt>Location</dt><dd>${h(e.location || 'Location not published.')}</dd><dt>Organized by</dt><dd>ACS Student Chapter, GSTU</dd></dl>${registration}<div class="event-actions">${survey}<a class="button secondary" href="${h(googleCalendarURL(e))}" target="_blank" rel="noopener noreferrer">Google Calendar ↗</a>${ics}</div>${e.sourceUrl ? `<a href="${h(e.sourceUrl)}" target="_blank" rel="noopener noreferrer">View event coverage ↗</a>` : ''}</div></div></article>`;
 }
 
 function members(list, cls = '', showRoles = true) {
@@ -171,12 +202,27 @@ export function renderTeam(data, { year = 'founders' } = {}) {
   return `<section class="archive" data-year="${year}"><div class="archive-heading"><h6>OUR AMAZING FULLY SKILLED TEAM MEMBERS</h6><h1 data-text="Team">${title}</h1></div>${list.length ? grid : '<p class="empty-state">Committee details will be published here.</p>'}${roster}${pagination(teamYears(data, year), year, teamHref, 'Team archive years')}</section>`;
 }
 
-export function renderMembership(data) {
+export function renderMembership(data, now = new Date()) {
   const m = data.membership;
-  const apply = m.applicationUrl || 'mailto:' + m.contactEmail;
-  const renew = m.renewalUrl || 'mailto:' + m.contactEmail + '?subject=Chapter%20membership%20renewal';
+  const forms = data.forms || [];
+  // A linked website form wins over an outside link; without either, the buttons open an email.
+  const target = (formId, url, mail) =>
+    linkedFormState(forms, formId, now) !== 'none' ? formLinkAttrs(formId) : `href="${h(url || mail)}"`;
+  const apply = target(m.applicationFormId, m.applicationUrl, 'mailto:' + m.contactEmail);
+  const renewing = linkedFormState(forms, m.renewalFormId, now) !== 'none' || m.renewalUrl;
+  const renew = target(m.renewalFormId, m.renewalUrl, 'mailto:' + m.contactEmail + '?subject=Chapter%20membership%20renewal');
+  const form = findForm(forms, m.applicationFormId);
+  const state = linkedFormState(forms, m.applicationFormId, now);
+  const note =
+    state === 'open' && form.closesAt
+      ? `Applications are open until ${bdLabel(form.closesAt)}.`
+      : state === 'scheduled'
+        ? `Applications open ${bdLabel(form.opensAt)}.`
+        : state === 'ended' || state === 'closed'
+          ? 'Applications are closed right now. Check back soon.'
+          : '';
   const benefits = m.benefits.map((v) => `<li>${h(v)}</li>`).join('');
-  return `<div class="wrap membership-grid"><div class="membership-pitch"><p class="eyebrow">Join us now</p><h2>Start your journey with us</h2><p class="lead">${h(m.intro)}</p><div class="membership-actions"><a class="btn btn-primary" href="${h(apply)}">Join now →</a><a class="btn btn-outline" href="${h(renew)}">${m.renewalUrl ? 'Renew membership' : 'Ask about renewal'}</a></div></div><div class="membership-card"><h3>Why join?</h3><ul class="check-list">${benefits}</ul><details class="home-membership-details"><summary>Membership benefits &amp; renewal</summary><div><h4>Who can join?</h4><p>${h(m.eligibility)}</p><h4>General membership</h4><p>${h(m.general)}</p><h4>Premium membership</h4><p>${h(m.premium)}</p><h4>Renew your membership</h4><p>${h(m.renewal)}</p></div></details></div></div>`;
+  return `<div class="wrap membership-grid"><div class="membership-pitch"><p class="eyebrow">Join us now</p><h2>Start your journey with us</h2><p class="lead">${h(m.intro)}</p><div class="membership-actions"><a class="btn btn-primary" ${apply}>Join now →</a><a class="btn btn-outline" ${renew}>${renewing ? 'Renew membership' : 'Ask about renewal'}</a></div>${note ? `<p class="membership-note">${h(note)}</p>` : ''}</div><div class="membership-card"><h3>Why join?</h3><ul class="check-list">${benefits}</ul><details class="home-membership-details"><summary>Membership benefits &amp; renewal</summary><div><h4>Who can join?</h4><p>${h(m.eligibility)}</p><h4>General membership</h4><p>${h(m.general)}</p><h4>Premium membership</h4><p>${h(m.premium)}</p><h4>Renew your membership</h4><p>${h(m.renewal)}</p></div></details></div></div>`;
 }
 
 /** Homepage: the next upcoming events, then the most recent ones (three cards). */
@@ -188,7 +234,7 @@ export function renderEventHighlights(data, now = new Date()) {
   return `<div class="highlight-grid">${list
     .map(
       (e) =>
-        `<a class="highlight-card" href="${eventHref(e)}" data-reveal><div class="highlight-media">${photo(e.image, e.title)}<span class="chip">${eventPast(e, now) ? 'Past event' : eventOpen(e, now) ? 'Registration open' : 'Upcoming'}</span></div><div class="highlight-body"><span class="event-kind">${categories[e.category]}</span><h3>${h(e.title)}</h3><time datetime="${e.date}">${eventDateLabel(e)}</time><span class="arrow-circle" aria-hidden="true">→</span></div></a>`,
+        `<a class="highlight-card" href="${eventHref(e)}" data-reveal><div class="highlight-media">${photo(e.image, e.title)}<span class="chip">${eventPast(e, now) ? 'Past event' : eventOpen(e, now, data.forms) ? 'Registration open' : 'Upcoming'}</span></div><div class="highlight-body"><span class="event-kind">${categories[e.category]}</span><h3>${h(e.title)}</h3><time datetime="${e.date}">${eventDateLabel(e)}</time><span class="arrow-circle" aria-hidden="true">→</span></div></a>`,
     )
     .join('')}</div>`;
 }
@@ -209,9 +255,23 @@ export function renderHeroSlides(data) {
     .join('');
 }
 
+/**
+ * The pill buttons on the homepage hero, shown only while they apply: the next event open for
+ * registration, and member registration while the linked membership form accepts answers.
+ */
 export function renderOpenEvent(data, now = new Date()) {
-  const open = data.events.filter((e) => eventOpen(e, now)).sort((a, b) => a.date.localeCompare(b.date));
-  if (!open.length) return '';
-  const e = open[0];
-  return `<a class="hero-registration" href="${eventHref(e)}" title="${h(e.title)}" aria-label="Explore ${h(e.title)} and register"><span>Explore new event &amp; register</span><span class="registration-arrow" aria-hidden="true">→</span></a>`;
+  const pills = [];
+  const open = data.events.filter((e) => eventOpen(e, now, data.forms)).sort((a, b) => a.date.localeCompare(b.date));
+  if (open.length) {
+    const e = open[0];
+    pills.push(
+      `<a class="hero-registration" href="${eventHref(e)}" title="${h(e.title)}" aria-label="Explore ${h(e.title)} and register"><span>Explore new event &amp; register</span><span class="registration-arrow" aria-hidden="true">→</span></a>`,
+    );
+  }
+  const memberForm = data.membership?.applicationFormId;
+  if (memberForm && linkedFormState(data.forms, memberForm, now) === 'open')
+    pills.push(
+      `<a class="hero-registration hero-registration-member" ${formLinkAttrs(memberForm)}><span>Member registration is open</span><span class="registration-arrow" aria-hidden="true">→</span></a>`,
+    );
+  return pills.join('');
 }

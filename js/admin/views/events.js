@@ -3,6 +3,7 @@ import { statusHTML, wireStatus, refreshStatus, autosave, showProblem, empty } f
 import { imageFieldHTML, wireImageFields } from '../image-picker.js';
 import { canEditEvent } from '../permissions.js';
 import { importWizard } from '../import-wizard.js';
+import { formSelect, formSummaries, keepMissing } from '../form-select.js';
 import { categories, eventFormValues, eventOpen, eventPast, normalizeEvent } from '../../lib/content-model.js';
 import { renderEvent, eventDateLabel } from '../../lib/content-render.js';
 import { resolveImage } from '../../public/media.js';
@@ -21,6 +22,8 @@ const FORM_KEYS = [
   'description',
   'registrationStatus',
   'registrationUrl',
+  'registrationFormId',
+  'surveyFormId',
   'sourceUrl',
 ];
 const pick = (v) => Object.fromEntries(FORM_KEYS.map((k) => [k, k === 'timed' ? !!v[k] : String(v[k] ?? '')]));
@@ -31,8 +34,8 @@ export const formFromEvent = (e) => {
 const blank = () => pick({ category: 'outreach', registrationStatus: 'unpublished', date: '', timed: false });
 const toEvent = (v) => normalizeEvent({ ...v, startTime: v.timed ? v.startTime : '', endTime: v.timed ? v.endTime : '' });
 
-function badge(e) {
-  if (eventOpen(e)) return '<span class="ed-tag ed-tag-open">Open</span>';
+function badge(e, forms) {
+  if (eventOpen(e, new Date(), forms)) return '<span class="ed-tag ed-tag-open">Open</span>';
   if (eventPast(e)) return '<span class="ed-tag">Past</span>';
   return '<span class="ed-tag ed-tag-new">Upcoming</span>';
 }
@@ -46,6 +49,7 @@ export const eventsView = {
     const entries = [...app.data.events].sort((a, b) => b.value.date.localeCompare(a.value.date));
     const years = [...new Set(entries.map((e) => e.value.date.slice(0, 4)))];
     const newDraft = app.drafts.get('event:new');
+    const forms = formSummaries(app);
     root.innerHTML = `
       <div class="ed-split${selected ? ' ed-split-detail' : ''}">
         <section class="ed-card ed-list-panel" aria-label="All events">
@@ -58,7 +62,7 @@ export const eventsView = {
               .map((entry) => {
                 const e = entry.value;
                 const draft = app.drafts.has(`event:${e.id}`);
-                return `<li data-text="${h((e.title + ' ' + e.location).toLowerCase())}" data-year="${e.date.slice(0, 4)}"><a href="#events/${encodeURIComponent(e.id)}"${selected === e.id ? ' aria-current="true"' : ''}><strong>${h(e.title)}</strong><small>${h(eventDateLabel(e))} · ${categories[e.category]}</small><span class="ed-item-tags">${badge(e)}${draft ? '<span class="ed-tag ed-tag-draft">Draft</span>' : ''}</span></a></li>`;
+                return `<li data-text="${h((e.title + ' ' + e.location).toLowerCase())}" data-year="${e.date.slice(0, 4)}"><a href="#events/${encodeURIComponent(e.id)}"${selected === e.id ? ' aria-current="true"' : ''}><strong>${h(e.title)}</strong><small>${h(eventDateLabel(e))} · ${categories[e.category]}</small><span class="ed-item-tags">${badge(e, forms)}${draft ? '<span class="ed-tag ed-tag-draft">Draft</span>' : ''}</span></a></li>`;
               })
               .join('')}
           </ul>
@@ -106,16 +110,6 @@ function renderEditor(root, app, entry, name) {
         <div class="ed-grid">
           ${field({ label: 'Event title', name: 'title', attrs: 'required maxlength="200"', wide: true })}
           ${select({ label: 'Category', name: 'category', options: Object.entries(categories).filter(([k]) => k !== 'all') })}
-          ${select({
-            label: 'Registration',
-            name: 'registrationStatus',
-            options: [
-              ['unpublished', 'Not announced yet'],
-              ['open', 'Open for registration'],
-              ['closed', 'Closed'],
-            ],
-            hint: 'Open events are promoted on the homepage until they end.',
-          })}
           ${field({ label: 'Start date', name: 'date', type: 'date', attrs: 'required' })}
           ${field({ label: 'End date', name: 'endDate', type: 'date', optional: true, hint: 'For events that run over several days. Leave blank for one day.' })}
           <label class="ed-check ed-wide"><input type="checkbox" name="timed"> Add start and end times (Bangladesh time, UTC+06:00)</label>
@@ -124,7 +118,26 @@ function renderEditor(root, app, entry, name) {
             ${field({ label: 'End time', name: 'endTime', type: 'time', hint: 'On the end date (or the start date for one-day events).' })}
           </div>
           ${field({ label: 'Location', name: 'location', optional: true, attrs: 'maxlength="300" placeholder="e.g. GSTU Academic Building, Room 301"', wide: true })}
-          ${field({ label: 'Registration link', name: 'registrationUrl', type: 'url', optional: true, attrs: 'placeholder="https://forms.gle/…"', hint: 'A Google Form or other sign-up page. Leave blank if registration is not online.', wide: true })}
+          <fieldset class="ed-wide ed-subsection"><legend>Registration and feedback <em>(optional)</em></legend>
+            <p class="ed-muted">Events do not need registration. To take registrations, build a form under <a href="#forms">Forms</a> and choose it here. The Register button opens it in a pop-up on the event page, and the form’s status and opening times decide when registration is open.</p>
+            <div class="ed-grid">
+              ${formSelect(app, { label: 'Registration form', name: 'registrationFormId', none: 'No registration form', prefer: 'event' })}
+              ${formSelect(app, { label: 'Feedback or survey form', name: 'surveyFormId', none: 'No feedback form', prefer: 'feedback', hint: 'Shows a “Share your feedback” button on the event page while the form is open.' })}
+            </div>
+            <div class="ed-grid" data-outside>
+              ${select({
+                label: 'Registration without a website form',
+                name: 'registrationStatus',
+                options: [
+                  ['unpublished', 'No registration'],
+                  ['open', 'Open: details announced soon'],
+                  ['closed', 'Closed'],
+                ],
+                hint: 'Open events are promoted on the homepage until they end.',
+              })}
+              ${field({ label: 'Outside registration link', name: 'registrationUrl', type: 'url', optional: true, attrs: 'placeholder="https://…"', hint: 'Only if registration happens on another website.' })}
+            </div>
+          </fieldset>
           ${field({ label: 'Description', name: 'description', type: 'textarea', attrs: 'required maxlength="5000" rows="6"', wide: true })}
           ${imageFieldHTML({ name: 'image', label: 'Event photo', hint: 'Square photos look best on the events page. Images are optimized automatically.' })}
           ${field({ label: 'Coverage link', name: 'sourceUrl', type: 'url', optional: true, attrs: 'placeholder="https://facebook.com/…"', hint: 'A post or album about the event.', wide: true })}
@@ -140,6 +153,13 @@ function renderEditor(root, app, entry, name) {
     </form>`;
   const form = $('form', root);
   fillForm(form, values);
+  keepMissing(form.elements.registrationFormId, values.registrationFormId);
+  keepMissing(form.elements.surveyFormId, values.surveyFormId);
+  // With a website form chosen, the form decides when registration is open.
+  const outside = $('[data-outside]', form);
+  const syncOutside = () => (outside.hidden = !!form.elements.registrationFormId.value);
+  syncOutside();
+  form.elements.registrationFormId.addEventListener('change', syncOutside);
   const times = $('[data-times]', form);
   const syncTimes = () => {
     times.hidden = !form.elements.timed.checked;
@@ -177,7 +197,7 @@ function renderEditor(root, app, entry, name) {
       return;
     }
     await openDialog(
-      `<h2>Preview</h2><div class="ed-dialog-body ed-preview">${renderEvent({ events: [event] }, event.id, { inlineCalendar: true })}</div><div class="ed-actions"><button type="button" class="ed-btn" data-close>Close</button></div>`,
+      `<h2>Preview</h2><div class="ed-dialog-body ed-preview">${renderEvent({ events: [event], forms: formSummaries(app) }, event.id, { inlineCalendar: true })}</div><div class="ed-actions"><button type="button" class="ed-btn" data-close>Close</button></div>`,
       (dialog) => {
         for (const img of $$('img[data-media]', dialog))
           resolveImage(img.dataset.media)

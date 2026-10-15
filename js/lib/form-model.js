@@ -225,7 +225,7 @@ export function formState(form, now = new Date()) {
   return 'open';
 }
 export const stateLabels = {
-  draft: 'Draft',
+  draft: 'Hidden',
   scheduled: 'Opens later',
   open: 'Accepting responses',
   ended: 'Time limit reached',

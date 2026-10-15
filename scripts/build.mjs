@@ -107,7 +107,7 @@ const adminCSSName = hashed('admin', adminCSS, 'css');
 write(`css/${adminCSSName}`, adminCSS);
 
 const bundles = await esbuild.build({
-  entryPoints: { site: 'js/public/site.js', certificates: 'js/public/certificates.js', form: 'js/public/form.js', admin: 'js/admin/main.js' },
+  entryPoints: { site: 'js/public/site.js', certificates: 'js/public/certificates.js', admin: 'js/admin/main.js' },
   bundle: true,
   minify: true,
   format: 'esm',
@@ -183,7 +183,7 @@ function page(filename, { title, description, body, active, view, attrs = {}, ad
   }
   const scripts = admin
     ? `<link rel="stylesheet" href="css/${adminCSSName}"><script type="module" src="${script.admin}"></script>`
-    : `<script type="module" src="${script.site}"></script>${active === 'certificates' ? `<script type="module" src="${script.certificates}"></script>` : ''}${filename === 'form.html' ? `<script type="module" src="${script.form}"></script>` : ''}`;
+    : `<script type="module" src="${script.site}"></script>${active === 'certificates' ? `<script type="module" src="${script.certificates}"></script>` : ''}`;
   const canonical = `https://acs-gstu.web.app/${filename === 'index.html' ? '' : filename}`;
   const head = [
     '<meta charset="utf-8">',

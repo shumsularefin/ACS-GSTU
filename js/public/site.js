@@ -3,9 +3,11 @@ import { setupMenu, setupReveal } from './menu.js';
 import { setupMedia } from './media.js';
 import { setupHomepage } from './homepage.js';
 import { setupLiveContent } from './live-content.js';
+import { setupFormPopups } from './form-popup.js';
 
 setupMenu();
 setupMedia();
 setupHomepage();
 setupLiveContent();
+setupFormPopups();
 setupReveal();
