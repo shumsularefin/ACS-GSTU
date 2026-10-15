@@ -19,7 +19,8 @@ import {
   renderMembership,
   renderOpenEvent,
   renderEventHighlights,
-  renderHeroSlides, heroSlides,
+  renderHeroSlides,
+  heroSlides,
 } from '../js/lib/content-render.js';
 import { firestoreREST } from '../js/lib/firestore-rest.js';
 import { loadPublished } from '../js/lib/content-store.js';

@@ -133,7 +133,6 @@ a:hover .arrow-circle, .arrow-circle:hover { background: var(--blue); color: #ff
 @keyframes registration-arrow { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(5px); } }
 @media (prefers-reduced-motion: reduce) { .hero-registration, .registration-arrow { animation: none; } }
 
-}
 @media (max-width: 760px) {
   .hero { display: block; min-height: 0; }
   .hero-content { padding: 64px 0 104px; }
