@@ -25,6 +25,8 @@ import {
   limit,
   startAfter,
   deleteField,
+  updateDoc,
+  Timestamp,
 } from 'firebase/firestore';
 import { normalizeMembershipID } from '../lib/content-model.js';
 import { stripMeta, contentFromLegacy, documentsFromContent } from '../lib/content-store.js';
@@ -155,13 +157,14 @@ export function createCloud({ db, auth }) {
     /** Everything the dashboard edits, with revisions for conflict checks. Private IDs only for super-admins. */
     async load(currentRole) {
       const superAdmin = currentRole === 'super-admin';
-      const [meta, eventDocs, homepage, membership, teamDocs, privateDocs] = await Promise.all([
+      const [meta, eventDocs, homepage, membership, teamDocs, privateDocs, formDocs] = await Promise.all([
         getDocFromServer(metaRef),
         getDocsFromServer(collection(db, 'events')),
         getDocFromServer(doc(db, 'pages', 'homepage')),
         getDocFromServer(doc(db, 'pages', 'membership')),
         getDocsFromServer(collection(db, 'team')),
         superAdmin ? getDocsFromServer(collection(db, 'rosterPrivate')) : null,
+        getDocsFromServer(collection(db, 'forms')).catch(() => null), // Older rules have no forms yet.
       ]);
       const ids = Object.fromEntries((privateDocs?.docs || []).map((d) => [d.id, d.data().ids || {}]));
       const privateRevisions = Object.fromEntries((privateDocs?.docs || []).map((d) => [d.id, d.data().revision || 0]));
@@ -188,6 +191,12 @@ export function createCloud({ db, auth }) {
             },
           ]),
         ),
+        formsUnavailable: formDocs === null,
+        forms: (formDocs?.docs || []).map((d) => ({
+          value: { ...stripMeta(d.data()), opensAt: d.data().opensAt?.toDate?.() || null, closesAt: d.data().closesAt?.toDate?.() || null },
+          revision: d.data().revision || 0,
+          createdBy: d.data().createdBy,
+        })),
       };
       if (!meta.exists()) {
         // The retired single-document layout, waiting for the one-time upgrade.
@@ -279,6 +288,59 @@ export function createCloud({ db, auth }) {
         });
         bumpMeta(tx, meta);
       });
+    },
+
+    // ---------------------------------------------------------------- forms
+
+    saveForm(form, baseRevision) {
+      return saveDocument(doc(db, 'forms', form.id), {
+        section: `Form “${form.title}”`,
+        action: baseRevision ? 'form.update' : 'form.create',
+        target: form.id,
+        detail: `${form.title} · ${form.status}`,
+        baseRevision,
+        data: (snap) => ({
+          ...form,
+          opensAt: form.opensAt ? Timestamp.fromDate(new Date(form.opensAt)) : null,
+          closesAt: form.closesAt ? Timestamp.fromDate(new Date(form.closesAt)) : null,
+          createdBy: snap.exists() ? snap.data().createdBy : uid(),
+        }),
+      });
+    },
+    deleteForm(form) {
+      return removeDocuments([{ ref: doc(db, 'forms', form.id), key: `forms:${form.id}` }], {
+        action: 'form.delete',
+        target: form.id,
+        detail: form.title,
+      });
+    },
+    async formResponses(formId) {
+      const snap = await getDocsFromServer(collection(db, 'forms', formId, 'responses'));
+      return snap.docs.map((d) => ({
+        id: d.id,
+        answers: d.data().answers || {},
+        submittedAt: d.data().submittedAt?.toDate?.() || null,
+        verified: d.data().verified === true,
+        verifiedAt: d.data().verifiedAt?.toDate?.() || null,
+      }));
+    },
+    async setResponseVerified(formId, responseId, verified) {
+      await updateDoc(doc(db, 'forms', formId, 'responses', responseId), {
+        verified,
+        verifiedBy: uid(),
+        verifiedAt: serverTimestamp(),
+      });
+    },
+    /** Permanently removes responses (super-admin), 100 per batch, each batch with one log entry. */
+    async deleteFormResponses(formId, ids, title = '') {
+      for (let start = 0; start < ids.length; start += 100) {
+        const group = ids.slice(start, start + 100);
+        const batch = writeBatch(db);
+        const auditId = audit(batch, 'form.responses.delete', formId, `Deleted ${group.length} response(s) to ${title || formId}`);
+        batch.set(doc(db, 'removals', `formResponses:${formId}`), { auditId });
+        for (const id of group) batch.delete(doc(db, 'forms', formId, 'responses', id));
+        await batch.commit();
+      }
     },
 
     // ---------------------------------------------------------------- one-time upgrade

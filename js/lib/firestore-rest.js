@@ -1,5 +1,5 @@
-// Minimal read-only Firestore REST client for public documents. Used by the build (Node)
-// and by public pages, so visitors never download the Firebase SDK.
+// Minimal Firestore REST client for public documents. Used by the build (Node) and by public pages,
+// so visitors never download the Firebase SDK. Writes are limited to creating form responses.
 
 export function decodeValue(v) {
   if ('stringValue' in v) return v.stringValue;
@@ -14,6 +14,16 @@ export function decodeValue(v) {
 }
 
 export const decodeFields = (fields = {}) => Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, decodeValue(v)]));
+
+export function encodeValue(v) {
+  if (v === null || v === undefined) return { nullValue: null };
+  if (typeof v === 'boolean') return { booleanValue: v };
+  if (typeof v === 'number') return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+  if (Array.isArray(v)) return { arrayValue: { values: v.map(encodeValue) } };
+  if (typeof v === 'object') return { mapValue: { fields: encodeFields(v) } };
+  return { stringValue: String(v) };
+}
+export const encodeFields = (data) => Object.fromEntries(Object.entries(data).map(([k, v]) => [k, encodeValue(v)]));
 
 export class FirestoreError extends Error {
   constructor(message, status) {
@@ -47,6 +57,41 @@ export function firestoreREST(
     }
   }
   return {
+    /**
+     * Creates a document that must not exist yet, with `timeField` set to the server time.
+     * Resolves 'created', or 'exists' when a document with this ID is already there.
+     */
+    async create(path, data, { timeField } = {}) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeout);
+      const name = `projects/${projectId}/databases/(default)/documents/${path}`;
+      try {
+        const response = await fetchImpl(`${base}:commit`, {
+          method: 'POST',
+          signal: controller.signal,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            writes: [
+              {
+                update: { name, fields: encodeFields(data) },
+                ...(timeField ? { updateTransforms: [{ fieldPath: timeField, setToServerValue: 'REQUEST_TIME' }] } : {}),
+                currentDocument: { exists: false },
+              },
+            ],
+          }),
+        });
+        if (response.ok) return 'created';
+        const body = await response.json().catch(() => ({}));
+        const status = body.error?.status || '';
+        if (response.status === 409 || status === 'ALREADY_EXISTS' || status === 'FAILED_PRECONDITION') return 'exists';
+        throw new FirestoreError(`Firestore write failed (${response.status} ${status})`, response.status);
+      } catch (error) {
+        if (error.name === 'AbortError') throw new FirestoreError('The chapter database did not respond in time.', 0);
+        throw error;
+      } finally {
+        clearTimeout(timer);
+      }
+    },
     /** A document's fields, or null when it does not exist. */
     async get(path) {
       const doc = await request(path.split('/').map(encodeURIComponent).join('/'));

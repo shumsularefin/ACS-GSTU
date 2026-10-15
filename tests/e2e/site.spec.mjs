@@ -15,6 +15,7 @@ test.describe.configure({ mode: 'serial' });
 
 let owner;
 let credential;
+let formId;
 
 /** Empties the emulators and stores the retired single-document layout, as production has it now. */
 async function resetEmulators() {
@@ -195,6 +196,65 @@ test('the super-admin revokes a certificate and the verification page says so', 
   await visitor.close();
 });
 
+test('an event registration form is built, answered once per transaction, checked and exported to Excel', async ({ browser }) => {
+  await owner.goto('/admin.html#forms');
+  await owner.getByRole('button', { name: '+ New form' }).click();
+  await owner.getByRole('button', { name: /Event registration/ }).click();
+  await expect(owner).toHaveURL(/#forms\/new$/);
+  const builder = owner.locator('form.ed-fb');
+  await builder.locator('[name="title"]').fill('Lab Safety Workshop registration');
+  await builder.locator('[name="status"]').selectOption('open');
+  await builder.locator('[name="payAmount"]').fill('150 BDT');
+  await builder.locator('[data-account] [data-k="number"]').fill('01700000000');
+  await builder.getByRole('button', { name: '+ Question' }).click();
+  await builder.locator('[data-q]').last().locator('[data-k="label"]').fill('T-shirt size');
+  await builder.locator('[data-q]').last().locator('[data-k="type"]').selectOption('dropdown');
+  await builder.locator('[data-q]').last().locator('[data-k="options"]').fill('S\nM\nL');
+  await expect(owner.locator('.ed-chip-draft')).toBeVisible();
+  await owner.locator('[data-publish-draft]').click();
+  await toast(owner, 'is live');
+  await expect(owner).toHaveURL(/#forms\/lab-safety-workshop-registration-\d{4}$/);
+  formId = decodeURIComponent(owner.url().split('#forms/')[1]);
+
+  const visitor = await browser.newPage();
+  const register = async (txn, membership = 'General member') => {
+    await visitor.goto(`/form.html?id=${formId}`);
+    await expect(visitor.getByRole('heading', { name: 'Lab Safety Workshop registration' })).toBeVisible();
+    await visitor.getByLabel('Full name').fill('Visitor One');
+    await visitor.getByLabel('Email address').fill('visitor@example.com');
+    await visitor.getByLabel('Phone number').fill('01711111111');
+    await visitor.getByLabel('University or institution').fill('GSTU');
+    await visitor.getByLabel('Department').selectOption('Chemistry');
+    await visitor.getByLabel('Student ID').fill('20CHEM042');
+    await visitor.getByLabel(membership).check();
+    await visitor.getByLabel('T-shirt size').selectOption('M');
+    if (txn) {
+      await visitor.getByLabel('bKash', { exact: true }).check();
+      await visitor.getByLabel(/^Paid from/).fill('01722222222');
+      await visitor.getByLabel('Transaction ID').fill(txn);
+    } else await expect(visitor.locator('[data-payment]')).toBeHidden();
+    await visitor.getByRole('button', { name: 'Submit' }).click();
+  };
+  await register('9AB7CD3EF1');
+  await expect(visitor.getByText('You are registered!')).toBeVisible();
+  await register('9ab7-cd3ef1');
+  await expect(visitor.locator('#payment_txn-error')).toContainText('already been used');
+  await register('', 'Premium member');
+  await expect(visitor.getByText('You are registered!')).toBeVisible();
+  await visitor.close();
+
+  await owner.goto(`/admin.html#forms/${formId}/responses`);
+  await expect(owner.locator('.ed-fb-stats')).toContainText('2responses');
+  await owner.locator('tr', { hasText: '9AB7CD3EF1' }).getByRole('button', { name: 'View' }).click();
+  await owner.getByLabel(/Payment checked/).check();
+  await toast(owner, 'Payment marked as checked');
+  await owner.locator('dialog').getByRole('button', { name: 'Close' }).click();
+  await expect(owner.locator('tr', { hasText: '9AB7CD3EF1' })).toContainText('Checked');
+  const download = owner.waitForEvent('download');
+  await owner.getByRole('button', { name: 'Download Excel (.xlsx)' }).click();
+  expect((await download).suggestedFilename()).toMatch(new RegExp(`^${formId}-responses-.*\.xlsx$`));
+});
+
 test('an outreach editor gets only the tools of that role', async ({ browser }) => {
   await owner.goto('/admin.html#editors');
   const form = owner.locator('[data-editor-form]');
@@ -224,13 +284,28 @@ test('an outreach editor gets only the tools of that role', async ({ browser }) 
 test('the dashboard and public pages fit a phone screen', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 375, height: 812 } });
   const page = await context.newPage();
-  for (const path of ['/index.html', '/activities.html', '/team.html?year=2026', '/certificates.html', '/event-green-and-clean.html']) {
+  for (const path of [
+    '/index.html',
+    '/activities.html',
+    '/team.html?year=2026',
+    '/certificates.html',
+    '/event-green-and-clean.html',
+    `/form.html?id=${formId}`,
+  ]) {
     await page.goto(path);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), path).toBe(true);
   }
   await signIn(page, OWNER);
   await expect(page.locator('#ed-nav-toggle')).toBeVisible();
-  for (const hash of ['#overview', '#events/science-fair-2027', '#team/2026', '#certificates', '#editors']) {
+  for (const hash of [
+    '#overview',
+    '#events/science-fair-2027',
+    `#forms/${formId}`,
+    `#forms/${formId}/responses`,
+    '#team/2026',
+    '#certificates',
+    '#editors',
+  ]) {
     await page.goto('/admin.html' + hash);
     await expect(page.locator('#ed-view')).not.toBeEmpty();
     const wide = await page.evaluate(() =>

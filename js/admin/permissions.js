@@ -3,15 +3,18 @@
 export const roleInfo = {
   'super-admin': {
     label: 'Super-admin',
-    summary: 'Full access: website content, executive committees and rosters, all certificates, editor access and the activity log.',
+    summary:
+      'Full access: website content, forms and responses, executive committees and rosters, all certificates, editor access and the activity log.',
   },
   administrator: {
     label: 'Chapter administrator',
-    summary: 'Events, homepage images, membership information, and certificates except executive recognition.',
+    summary:
+      'Events, forms and all their responses, homepage images, membership information, and certificates except executive recognition.',
   },
   outreach: {
     label: 'Outreach editor',
-    summary: 'Homepage images, membership information, adding events (and editing your own), and participant certificates.',
+    summary:
+      'Homepage images, membership information, adding events and forms (and editing your own, with their responses), and participant certificates.',
   },
 };
 
@@ -28,6 +31,9 @@ export function permissions(role) {
     membership: editor,
     team: superAdmin,
     import: superAdmin,
+    forms: editor,
+    manageAnyForm: superAdmin || role === 'administrator',
+    deleteForms: superAdmin,
     certificates: editor,
     certificateTypes: (type) => superAdmin || (role === 'administrator' && type !== 'executive') || type === 'participant',
     revoke: superAdmin,
@@ -41,3 +47,4 @@ export function permissions(role) {
 }
 
 export const canEditEvent = (perms, entry, uid) => perms.editAnyEvent || !entry || entry.createdBy === uid;
+export const canManageForm = (perms, entry, uid) => perms.manageAnyForm || !entry || entry.createdBy === uid;

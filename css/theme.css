@@ -382,3 +382,67 @@ section { position: relative; }
 @media (prefers-reduced-motion: reduce) { .reveal-pending { opacity: 1; transform: none; } .reveal-in, .pillar, .event-card, .highlight-card, .member-card { transition: none; } }
 .content-update-notice { position: fixed; z-index: 200; left: 50%; bottom: 20px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; padding: 10px 12px 10px 20px; border-radius: 9990px; background: var(--charcoal); color: #fff; max-width: calc(100% - 32px); }
 .content-update-notice .button { min-height: 40px; padding: 0 18px; }
+
+/* ------------------------------------------------------------ website forms (form.html) */
+.form-page { padding: clamp(36px, 6vw, 72px) 0 clamp(64px, 8vw, 112px); }
+.form-wrap { max-width: 780px; }
+.pf { display: grid; gap: 16px; }
+.pf-head, .pf-q, .pf-section, .pf-pay, .pf-closed, .pf-done, .pf-loading { background: #fff; border: 1px solid var(--line); border-radius: 22px; padding: clamp(20px, 3vw, 30px); }
+.pf-head { border: 1.5px solid var(--blue); }
+.pf-head h1 { font-size: clamp(30px, 4.4vw, 46px); font-weight: 500; letter-spacing: -0.02em; margin: 4px 0 12px; }
+.pf-head p { margin: 0 0 8px; color: var(--muted); }
+.pf-head .eyebrow { color: var(--blue); margin: 0; }
+.pf-deadline { display: inline-flex; padding: 6px 14px; border-radius: 9990px; background: var(--mist); color: var(--ink) !important; font-size: 14px; margin-top: 6px !important; }
+.pf-required-note { font-size: 14px; }
+.pf-req { color: #c62828; margin-left: 3px; }
+.pf-section { background: var(--ink); border-color: var(--ink); color: #fff; }
+.pf-section h2 { color: #fff; font-size: 22px; font-weight: 500; margin: 0; }
+.pf-section p { color: rgb(255 255 255 / 75%); margin: 6px 0 0; }
+fieldset.pf-q { margin: 0; min-width: 0; }
+.pf-q[hidden], .pf-pay[hidden] { display: none; }
+.pf-label { display: block; font-weight: 500; font-size: 17px; color: var(--ink); margin: 0 0 4px; padding: 0; }
+.pf-help { margin: 0 0 10px; font-size: 14px; color: var(--muted); }
+.pf-q input:not([type=radio]):not([type=checkbox]), .pf-q select, .pf-q textarea { width: 100%; margin-top: 8px; min-height: 48px; padding: 11px 14px; border: 1px solid #cfcfd8; border-radius: 12px; background: #fff; font: inherit; color: var(--ink); }
+.pf-q textarea { resize: vertical; }
+.pf-q input:focus, .pf-q select:focus, .pf-q textarea:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgb(65 43 253 / 16%); }
+.pf-q [aria-invalid=true] { border-color: #c62828 !important; }
+.pf-options { display: grid; gap: 8px; margin-top: 8px; }
+.pf-option { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
+.pf-option:hover { border-color: var(--blue); }
+.pf-option:has(input:checked) { border-color: var(--blue); background: rgb(65 43 253 / 6%); }
+.pf-option input[type=radio], .pf-option input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--blue); flex: none; }
+.pf-other input[type=text] { margin: 0 !important; min-height: 38px !important; flex: 1; }
+.pf-scale { display: flex; align-items: center; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+.pf-scale-end { font-size: 13px; color: var(--muted); }
+.pf-scale-steps { display: flex; gap: 6px; flex-wrap: wrap; }
+.pf-scale-step { position: relative; }
+.pf-scale-step input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.pf-scale-step span { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; border: 1px solid #cfcfd8; font-weight: 500; }
+.pf-scale-step input:checked + span { background: var(--blue); border-color: var(--blue); color: #fff; }
+.pf-scale-step input:focus-visible + span { box-shadow: 0 0 0 3px rgb(65 43 253 / 25%); }
+.pf-error { color: #c62828; font-size: 14px; margin: 8px 0 0; }
+.pf-pay { border: 1.5px solid var(--blue); display: grid; gap: 14px; }
+.pf-pay .pf-q { border: 0; padding: 0; border-radius: 0; }
+.pf-pay-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.pf-pay-head h2 { margin: 0; font-size: 24px; font-weight: 500; }
+.pf-amount { margin: 0; font-size: 22px; font-weight: 600; color: var(--blue); }
+.pf-pay-note { margin: 0; color: var(--muted); }
+.pf-accounts { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.pf-account { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; padding: 14px 16px; border-radius: 16px; background: var(--mist); }
+.pf-method { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--blue); }
+.pf-bkash .pf-method { color: #d1166b; } .pf-nagad .pf-method { color: #e8541e; } .pf-rocket .pf-method { color: #8c3494; }
+.pf-number { grid-column: 1; font-size: 19px; font-weight: 600; letter-spacing: .02em; font-variant-numeric: tabular-nums; word-break: break-all; }
+.pf-account small { grid-column: 1; color: var(--muted); }
+.pf-copy { grid-column: 2; grid-row: 1 / span 3; border: 1px solid var(--line); background: #fff; border-radius: 9990px; padding: 7px 14px; font: 500 13px Poppins, sans-serif; cursor: pointer; }
+.pf-copy:hover { border-color: var(--blue); color: var(--blue); }
+.pf-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.pf-submit { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding-top: 6px; }
+.pf-submit .btn { min-width: 180px; }
+.pf-status { margin: 0; color: var(--muted); }
+.pf-closed { font-size: 18px; text-align: center; }
+.pf-done { text-align: center; padding: clamp(36px, 6vw, 64px) 24px; }
+.pf-done:focus { outline: none; }
+.pf-done-icon { display: inline-grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: var(--aqua); color: var(--ink); font-size: 30px; margin-bottom: 12px; }
+.pf-done h1 { font-size: clamp(26px, 4vw, 38px); font-weight: 500; }
+.pf-done p { color: var(--muted); max-width: 520px; margin: 0 auto 22px; }
+@media (max-width: 560px) { .pf-scale-step span { width: 38px; height: 38px; } .pf-submit .btn { width: 100%; } }

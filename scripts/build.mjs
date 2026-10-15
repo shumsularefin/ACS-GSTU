@@ -107,7 +107,7 @@ const adminCSSName = hashed('admin', adminCSS, 'css');
 write(`css/${adminCSSName}`, adminCSS);
 
 const bundles = await esbuild.build({
-  entryPoints: { site: 'js/public/site.js', certificates: 'js/public/certificates.js', admin: 'js/admin/main.js' },
+  entryPoints: { site: 'js/public/site.js', certificates: 'js/public/certificates.js', form: 'js/public/form.js', admin: 'js/admin/main.js' },
   bundle: true,
   minify: true,
   format: 'esm',
@@ -183,7 +183,7 @@ function page(filename, { title, description, body, active, view, attrs = {}, ad
   }
   const scripts = admin
     ? `<link rel="stylesheet" href="css/${adminCSSName}"><script type="module" src="${script.admin}"></script>`
-    : `<script type="module" src="${script.site}"></script>${active === 'certificates' ? `<script type="module" src="${script.certificates}"></script>` : ''}`;
+    : `<script type="module" src="${script.site}"></script>${active === 'certificates' ? `<script type="module" src="${script.certificates}"></script>` : ''}${filename === 'form.html' ? `<script type="module" src="${script.form}"></script>` : ''}`;
   const canonical = `https://acs-gstu.web.app/${filename === 'index.html' ? '' : filename}`;
   const head = [
     '<meta charset="utf-8">',
@@ -199,7 +199,7 @@ function page(filename, { title, description, body, active, view, attrs = {}, ad
     `<meta property="og:type" content="${view === 'event' ? 'article' : 'website'}">`,
     `<meta property="og:image" content="${h(shareImage(image))}">`,
     '<meta name="twitter:card" content="summary_large_image">',
-    admin || filename === '404.html' ? '<meta name="robots" content="noindex,nofollow">' : '',
+    admin || filename === '404.html' || filename === 'form.html' ? '<meta name="robots" content="noindex,nofollow">' : '',
     '<link rel="icon" href="ico/favicon.png">',
     `<link rel="stylesheet" href="css/${cssName}">`,
     active === 'index' ? `<link rel="preload" as="image" href="${h(firstHeroImage())}" fetchpriority="high">` : '',
@@ -249,6 +249,12 @@ page('admin.html', {
   active: 'admin',
   body: sourcePage('admin'),
   admin: true,
+});
+page('form.html', {
+  title: 'Chapter form',
+  description: 'Register or share feedback with the ACS Student Chapter, GSTU.',
+  active: '',
+  body: sourcePage('form'),
 });
 for (const name of ['certificates', 'verify'])
   page(`${name}.html`, {
@@ -318,7 +324,7 @@ write('data/site-config.json', JSON.stringify(siteConfig, null, 2));
 fs.copyFileSync('data/image-manifest.json', path.join(publicRoot, 'data/image-manifest.json'));
 write('data/content.json', JSON.stringify(data));
 // Search engines: every public page, never the dashboard.
-const listed = pages.filter((f) => !['admin.html', '404.html', 'event.html', 'verify.html'].includes(f));
+const listed = pages.filter((f) => !['admin.html', '404.html', 'event.html', 'verify.html', 'form.html'].includes(f));
 const years = [...new Set(data.events.map((e) => e.date.slice(0, 4)))];
 const urls = [
   ...listed.map((f) => SITE + (f === 'index.html' ? '' : f)),

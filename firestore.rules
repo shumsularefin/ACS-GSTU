@@ -13,6 +13,8 @@ rules_version = '2';
 //   certificateLookup/{hash}  public   SHA-256(eventId + membership ID) -> credential IDs
 //   certificateEvents/{id}    public   Certificate Center event list
 //   siteImages/{id}           public   uploaded, optimized JPEG images
+//   forms/{id}                public   website forms (registration, feedback) built in the dashboard
+//   forms/{id}/responses/{r}  private  answers; anyone may add one while the form is open
 //   chapterEditors/{email}    private  editor grants managed by the super-admin
 //   auditLogs/{id}            private  append-only activity log (server timestamps)
 //   removals/{key}            private  tombstones that tie a deletion to its log entry
@@ -79,7 +81,8 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time
         && request.resource.data.action in ['content.migrate', 'event.create', 'event.update', 'event.delete', 'page.update',
              'team.update', 'team.delete', 'image.add', 'image.delete', 'access.set', 'access.delete',
-             'certificate.issue', 'certificate.revoke', 'certificate.migrate', 'certificate.catalog', 'certificate.delete']
+             'certificate.issue', 'certificate.revoke', 'certificate.migrate', 'certificate.catalog', 'certificate.delete',
+             'form.create', 'form.update', 'form.delete', 'form.responses.delete']
         && request.resource.data.target is string && request.resource.data.target.size() <= 200
         && request.resource.data.detail is string && request.resource.data.detail.size() <= 1000
         && request.resource.data.get('ids', []) is list && request.resource.data.get('ids', []).size() <= 200;
@@ -282,6 +285,59 @@ service cloud.firestore {
             && request.resource.data.get('archived', false) == (resource == null ? false : resource.data.get('archived', false)))
           || (isSuperAdmin() && logAt(request.resource.data.auditId).action in ['certificate.catalog', 'content.migrate']));
       allow delete: if isSuperAdmin() && removed('certificateEvents:' + eventId, 'certificate.delete', eventId);
+    }
+
+    // ---------------------------------------------------------------- forms
+
+    function formFields(d, id) {
+      return d.keys().hasOnly(['id', 'title', 'description', 'kind', 'status', 'opensAt', 'closesAt', 'eventId', 'fields',
+             'payment', 'confirmation', 'createdBy', 'revision', 'updatedAt', 'updatedBy', 'auditId'])
+        && d.id == id && id.matches('^[a-z0-9]+(-[a-z0-9]+)*$') && id.size() <= 80
+        && d.title is string && d.title.size() > 0 && d.title.size() <= 200
+        && shortText(d.description, 3000) && shortText(d.confirmation, 1000) && shortText(d.eventId, 100)
+        && d.kind in ['member', 'event', 'feedback', 'general'] && d.status in ['draft', 'open', 'closed']
+        && (d.opensAt == null || d.opensAt is timestamp) && (d.closesAt == null || d.closesAt is timestamp)
+        && d.fields is list && d.fields.size() > 0 && d.fields.size() <= 80
+        && d.payment is map && d.payment.enabled is bool && d.createdBy is string;
+    }
+
+    match /forms/{formId} {
+      allow get, list: if true;
+      allow create: if isEditor() && formFields(request.resource.data, formId) && request.resource.data.revision == 1
+        && request.resource.data.createdBy == request.auth.uid && stamped('form.create', formId);
+      // Super-admins and chapter administrators edit any form; outreach editors edit the forms they created.
+      allow update: if (role() in ['super-admin', 'administrator'] || (isEditor() && resource.data.createdBy == request.auth.uid))
+        && formFields(request.resource.data, formId) && request.resource.data.createdBy == resource.data.createdBy
+        && nextRevision() && stamped('form.update', formId);
+      allow delete: if isSuperAdmin() && removed('forms:' + formId, 'form.delete', formId);
+
+      function parentForm() { return get(/databases/$(database)/documents/forms/$(formId)).data; }
+      function accepting(f) {
+        return f.status == 'open' && (f.opensAt == null || request.time >= f.opensAt) && (f.closesAt == null || request.time < f.closesAt);
+      }
+      // Answers hold personal details, so only administrators and the form's creator read them.
+      function mayReadResponses() {
+        return role() in ['super-admin', 'administrator'] || (isEditor() && parentForm().createdBy == request.auth.uid);
+      }
+
+      match /responses/{responseId} {
+        allow get, list: if mayReadResponses();
+        // Anyone may answer while the form is open. A paid answer is stored under its transaction ID,
+        // so the same transaction cannot be submitted twice.
+        allow create: if accepting(parentForm())
+          && request.resource.data.keys().hasOnly(['answers', 'submittedAt'])
+          && request.resource.data.submittedAt == request.time
+          && request.resource.data.answers is map && request.resource.data.answers.size() <= 85
+          && ((responseId.matches('^r_[a-f0-9]{24}$') && !('payment_txn' in request.resource.data.answers))
+            || (parentForm().payment.enabled == true && responseId.matches('^txn_[A-Z0-9]{6,40}$')
+              && responseId == 'txn_' + request.resource.data.answers.payment_txn));
+        // Marking a payment as checked.
+        allow update: if mayReadResponses()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['verified', 'verifiedBy', 'verifiedAt'])
+          && request.resource.data.verified is bool && request.resource.data.verifiedBy == request.auth.uid
+          && request.resource.data.verifiedAt == request.time;
+        allow delete: if isSuperAdmin() && removed('formResponses:' + formId, 'form.responses.delete', formId);
+      }
     }
 
     // ---------------------------------------------------------------- retired layout (read-only)

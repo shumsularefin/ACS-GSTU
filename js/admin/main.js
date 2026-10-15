@@ -5,18 +5,31 @@ import { flushAutosaves } from './section.js';
 import { permissions, roleInfo } from './permissions.js';
 import { $, $$, h, toast, confirmDialog, openDialog, errorMessage, busy, when } from './ui.js';
 import { normalizeEvent, normalizeHomepage, normalizeMembership, normalizeCommittee, normalizePerson } from '../lib/content-model.js';
+import { normalizeForm, fromLocalBD } from '../lib/form-model.js';
 import { overviewView } from './views/overview.js';
 import { eventsView } from './views/events.js';
 import { homepageView } from './views/homepage.js';
 import { membershipView } from './views/membership.js';
 import { teamView } from './views/team.js';
+import { formsView } from './views/forms.js';
 import { certificatesView } from './views/certificates.js';
 import { editorsView } from './views/editors.js';
 import { backupsView } from './views/backups.js';
 import { accountView } from './views/account.js';
 import { upgradeView } from './views/upgrade.js';
 
-const views = [overviewView, eventsView, homepageView, membershipView, teamView, certificatesView, editorsView, backupsView, accountView];
+const views = [
+  overviewView,
+  eventsView,
+  formsView,
+  homepageView,
+  membershipView,
+  teamView,
+  certificatesView,
+  editorsView,
+  backupsView,
+  accountView,
+];
 
 const app = {
   config: null,
@@ -41,11 +54,12 @@ app.draftLabel = (name) => {
     const draft = app.drafts.get(name);
     return `Event “${draft?.value?.title || id}”`;
   }
+  if (kind === 'form') return `Form “${app.drafts.get(name)?.value?.title || id}”`;
   return name;
 };
 app.draftView = (name) => {
   const [kind, id] = name.split(':');
-  return kind === 'event' ? ['events', id] : kind === 'team' ? ['team', id] : [kind];
+  return kind === 'event' ? ['events', id] : kind === 'team' ? ['team', id] : kind === 'form' ? ['forms', id] : [kind];
 };
 
 /** Validates a draft and returns the value that will be written. Throws a readable message. */
@@ -61,6 +75,13 @@ app.prepareDraft = (name) => {
       throw Error('An event with this web address already exists. Change the title, or the Event ID under “Web address”.');
     return event;
   }
+  if (kind === 'form') {
+    const v = draft.value;
+    const form = normalizeForm({ ...v, opensAt: fromLocalBD(v.opensAt), closesAt: fromLocalBD(v.closesAt) });
+    if (id === 'new' && app.data.forms.some((f) => f.value.id === form.id))
+      throw Error('A form with this web address already exists. Change the title, or the address under “Web address”.');
+    return form;
+  }
   if (kind === 'team')
     return id === 'founders'
       ? { members: draft.value.members.map(normalizePerson) }
@@ -73,6 +94,7 @@ async function write(name, value, baseRevision) {
   if (kind === 'homepage' || kind === 'membership') return app.cloud.savePage(kind, value, baseRevision);
   if (kind === 'event') return app.cloud.saveEvent(value, baseRevision);
   if (kind === 'team') return app.cloud.saveTeam(id, value, baseRevision);
+  if (kind === 'form') return app.cloud.saveForm(value, baseRevision);
   throw Error('Unknown draft.');
 }
 
@@ -99,6 +121,10 @@ app.publish = async (name, { reload = true, quiet = false } = {}) => {
       app.showProblem(name, 'An event with this web address already exists. Change the title or the Event ID under “Web address”.');
       return false;
     }
+    if (name.startsWith('form:') && !draft.baseRevision) {
+      app.showProblem(name, 'A form with this web address already exists. Change the title or the address under “Web address”.');
+      return false;
+    }
     const choice = await openDialog(
       `<h2>Someone else changed ${h(app.draftLabel(name))}</h2><div class="ed-dialog-body"><p>Another editor published this section after you started your draft.</p><p><strong>Publish mine</strong> replaces their version with yours. <strong>Use theirs</strong> discards your draft and loads the live version.</p></div><div class="ed-actions"><button type="button" class="ed-btn ed-btn-quiet" data-close>Cancel</button><button type="button" class="ed-btn" data-choice="theirs">Use theirs</button><button type="button" class="ed-btn ed-btn-primary" data-choice="mine">Publish mine</button></div>`,
       (dialog, close) => dialog.addEventListener('click', (e) => e.target.dataset.choice && close(e.target.dataset.choice)),
@@ -117,6 +143,7 @@ app.publish = async (name, { reload = true, quiet = false } = {}) => {
   if (app.problem?.name === name) app.problem = null;
   if (reload) await app.reload();
   if (name === 'event:new' && app.route.view === 'events') navigate('events', [value.id]);
+  if (name === 'form:new' && app.route.view === 'forms') navigate('forms', [value.id]);
   if (!quiet) toast(`${label} is live. Visitors see it now; search engines see it after the automatic rebuild (within about 15 minutes).`);
   return true;
 };

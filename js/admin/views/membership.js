@@ -3,7 +3,7 @@ import { field, formValues, fillForm } from '../ui.js';
 import { statusHTML, wireStatus, refreshStatus, autosave, showProblem } from '../section.js';
 
 const KEYS = ['intro', 'benefits', 'eligibility', 'general', 'premium', 'renewal', 'applicationUrl', 'renewalUrl', 'contactEmail'];
-const pick = (v) => Object.fromEntries(KEYS.map((k) => [k, Array.isArray(v[k]) ? v[k].join('\n') : String(v[k] ?? '')]));
+export const pick = (v) => Object.fromEntries(KEYS.map((k) => [k, Array.isArray(v[k]) ? v[k].join('\n') : String(v[k] ?? '')]));
 
 export const membershipView = {
   id: 'membership',

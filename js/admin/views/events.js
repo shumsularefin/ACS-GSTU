@@ -24,7 +24,7 @@ const FORM_KEYS = [
   'sourceUrl',
 ];
 const pick = (v) => Object.fromEntries(FORM_KEYS.map((k) => [k, k === 'timed' ? !!v[k] : String(v[k] ?? '')]));
-const formFromEvent = (e) => {
+export const formFromEvent = (e) => {
   const v = eventFormValues(e);
   return pick({ ...v, timed: !!v.startTime });
 };

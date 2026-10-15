@@ -21,6 +21,8 @@ import {
 import { createCloud, ConflictError } from '../../js/admin/cloud.js';
 import { normalizeContent, normalizeEvent } from '../../js/lib/content-model.js';
 import { importCertificates, membershipLookupID } from '../../js/lib/certificate-model.js';
+import { firestoreREST } from '../../js/lib/firestore-rest.js';
+import { normalizeForm, newForm, checkAnswers, responseId, departments } from '../../js/lib/form-model.js';
 
 if (!process.env.FIRESTORE_EMULATOR_HOST) throw Error('Run these tests with the Firestore emulator (npm run test:rules).');
 
@@ -282,6 +284,89 @@ test('certificates issued before the split stay private until migrated, then kee
   const lookup = await getDoc(doc(anon.db, 'certificateLookup', await membershipLookupID('old-workshop', 'M-500')));
   assert.deepEqual(lookup.data().ids, ['ACS-LEGACY0001']);
   assert.equal(await owner.cloud.certificatesNeedingMigration(), 0);
+});
+
+test('forms: editors publish forms, anyone answers while open, answers stay private', async () => {
+  const { owner, admin, outreach, other, anon } = accounts;
+  const rest = firestoreREST('demo-acs-rules', { origin: `http://${process.env.FIRESTORE_EMULATOR_HOST}` });
+  const template = newForm('event');
+  const form = normalizeForm({
+    ...template,
+    id: 'workshop-registration',
+    title: 'Workshop registration',
+    status: 'open',
+    payment: { ...template.payment, amount: '100 BDT', accounts: [{ method: 'bkash', number: '01700000000', note: 'Personal' }] },
+  });
+  await assertSucceeds(outreach.cloud.saveForm(form, 0));
+  assert.equal((await rest.get('forms/workshop-registration')).title, 'Workshop registration');
+
+  const person = {
+    name: 'Ayesha Rahman',
+    email: 'ayesha@example.com',
+    phone: '01711111111',
+    institution: 'GSTU',
+    department: departments[0],
+    student_id: '20ACCE001',
+    membership: 'General member',
+    payment_method: 'bkash',
+    payment_sender: '01722222222',
+    payment_txn: '8n7a-6b5c4d',
+  };
+  const paid = checkAnswers(form, person);
+  assert.deepEqual(paid.errors, {});
+  const paidId = responseId(form, paid.answers);
+  assert.equal(paidId, 'txn_8N7A6B5C4D');
+  const path = (id) => `forms/workshop-registration/responses/${id}`;
+  assert.equal(await rest.create(path(paidId), { answers: paid.answers }, { timeField: 'submittedAt' }), 'created');
+  // The same transaction cannot be used twice.
+  assert.equal(await rest.create(path(paidId), { answers: paid.answers }, { timeField: 'submittedAt' }), 'exists');
+  // A paid answer must use its transaction ID as the document ID.
+  await assert.rejects(rest.create(path('r_' + 'a'.repeat(24)), { answers: paid.answers }, { timeField: 'submittedAt' }));
+  await assert.rejects(rest.create(path('txn_OTHER12345'), { answers: paid.answers }, { timeField: 'submittedAt' }));
+  // Premium members skip the payment.
+  const premium = checkAnswers(form, { ...person, membership: 'Premium member', acs_id: 'P-77' });
+  assert.deepEqual(premium.errors, {});
+  assert.equal(premium.answers.payment_txn, undefined);
+  const premiumId = responseId(form, premium.answers);
+  assert.match(premiumId, /^r_[a-f0-9]{24}$/);
+  assert.equal(await rest.create(path(premiumId), { answers: premium.answers }, { timeField: 'submittedAt' }), 'created');
+  // Extra fields and a made-up time are refused.
+  await assert.rejects(rest.create(path('r_' + 'b'.repeat(24)), { answers: premium.answers, spam: true }, { timeField: 'submittedAt' }));
+  await assert.rejects(rest.create(path('r_' + 'c'.repeat(24)), { answers: premium.answers, submittedAt: 'yesterday' }));
+
+  // Answers are private: the creator, administrators and super-admins read them; nobody else.
+  await assertFails(getDocs(collection(anon.db, 'forms', 'workshop-registration', 'responses')));
+  await assertFails(other.cloud.formResponses('workshop-registration'));
+  assert.equal((await outreach.cloud.formResponses('workshop-registration')).length, 2);
+  assert.equal((await admin.cloud.formResponses('workshop-registration')).length, 2);
+  await assertSucceeds(outreach.cloud.setResponseVerified('workshop-registration', paidId, true));
+  assert.equal((await owner.cloud.formResponses('workshop-registration')).find((r) => r.id === paidId).verified, true);
+  await assertFails(updateDoc(doc(admin.db, 'forms', 'workshop-registration', 'responses', paidId), { answers: {} }));
+  await assertFails(updateDoc(doc(anon.db, 'forms', 'workshop-registration', 'responses', paidId), { verified: true }));
+
+  // Only the creator and administrators change a form; the time limit and status stop new answers.
+  await assertFails(other.cloud.saveForm({ ...form, title: 'Taken over' }, 1));
+  await assertSucceeds(admin.cloud.saveForm({ ...form, closesAt: new Date(Date.now() - 60000) }, 1));
+  await assert.rejects(
+    rest.create(path('r_' + 'd'.repeat(24)), { answers: premium.answers }, { timeField: 'submittedAt' }),
+    (e) => e.status === 403,
+  );
+  await assertSucceeds(admin.cloud.saveForm({ ...form, opensAt: new Date(Date.now() + 3600000) }, 2));
+  await assert.rejects(rest.create(path('r_' + 'e'.repeat(24)), { answers: premium.answers }, { timeField: 'submittedAt' }));
+  await assertSucceeds(outreach.cloud.saveForm({ ...form, status: 'closed' }, 3));
+  await assert.rejects(rest.create(path('r_' + 'f'.repeat(24)), { answers: premium.answers }, { timeField: 'submittedAt' }));
+  await assertSucceeds(outreach.cloud.saveForm(form, 4));
+  assert.equal(await rest.create(path('r_' + '1'.repeat(24)), { answers: premium.answers }, { timeField: 'submittedAt' }), 'created');
+
+  // Only super-admins delete responses and forms, with a log entry.
+  const ids = (await owner.cloud.formResponses('workshop-registration')).map((r) => r.id);
+  await assertFails(admin.cloud.deleteFormResponses('workshop-registration', ids));
+  await assertFails(deleteDoc(doc(owner.db, 'forms', 'workshop-registration', 'responses', ids[0])));
+  await assertSucceeds(owner.cloud.deleteFormResponses('workshop-registration', ids, 'Workshop registration'));
+  assert.equal((await owner.cloud.formResponses('workshop-registration')).length, 0);
+  await assertFails(outreach.cloud.deleteForm(form));
+  await assertSucceeds(owner.cloud.deleteForm(form));
+  assert.equal(await rest.get('forms/workshop-registration'), null);
 });
 
 test('images, activity log and removals', async () => {
