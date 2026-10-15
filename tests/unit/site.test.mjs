@@ -9,6 +9,16 @@ const pages = fs.readdirSync('public').filter((f) => f.endsWith('.html') && !f.s
 const build = JSON.parse(read('public/data/build.json'));
 const hosting = JSON.parse(read('firebase.json')).hosting;
 
+test('the homepage names the site and its logo for search engines', () => {
+  const html = fs.readFileSync('public/index.html', 'utf8');
+  const data = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/)[1]);
+  const site = data['@graph'].find((n) => n['@type'] === 'WebSite');
+  assert.equal(site.name, 'ACS Student Chapter, GSTU');
+  const logo = data['@graph'].find((n) => n['@type'] === 'Organization').logo.replace('https://acs-gstu.web.app/', 'public/');
+  assert.ok(fs.existsSync(logo));
+  assert.ok(html.includes('rel="icon" type="image/png" sizes="48x48"'));
+});
+
 test('every page has the shared shell, one h1 and only local assets that exist', () => {
   for (const file of pages) {
     const html = read(`public/${file}`);
@@ -16,7 +26,8 @@ test('every page has the shared shell, one h1 and only local assets that exist',
     assert.equal((html.match(/<main\b/g) || []).length, 1, file);
     assert.ok(html.includes('Skip to content'), file);
     assert.ok(html.includes('<footer class="footer'), file);
-    assert.ok(!/<script(?![^>]*src=)[^>]*>/.test(html), `${file}: no inline scripts (the CSP blocks them)`);
+    // Structured data (application/ld+json) is never executed, so the CSP does not apply to it.
+    assert.ok(!/<script(?![^>]*src=)(?![^>]*application\/ld\+json)[^>]*>/.test(html), `${file}: no inline scripts (the CSP blocks them)`);
     for (const [, url] of html.matchAll(/(?:href|src)="([^"]+)"/g)) {
       if (/^(?:https?:|mailto:|tel:|#|data:)/.test(url) || url.includes('?')) continue;
       assert.ok(fs.existsSync(`public/${url.split('#')[0]}`), `${file}: missing ${url}`);

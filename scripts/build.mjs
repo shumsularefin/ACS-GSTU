@@ -160,6 +160,36 @@ function firstHeroImage() {
  * js/public/site.js can refresh it after a publish, before the next scheduled rebuild.
  */
 const SITE = 'https://acs-gstu.web.app/';
+// Tells search engines the site's name and logo (shown above the link in Google results).
+const siteSchema = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE}#website`,
+      name: 'ACS Student Chapter, GSTU',
+      alternateName: ['ACS GSTU', 'ACS International Student Chapter, GSTU', 'American Chemical Society Student Chapter GSTU'],
+      url: SITE,
+      publisher: { '@id': `${SITE}#organization` },
+    },
+    {
+      '@type': 'Organization',
+      '@id': `${SITE}#organization`,
+      name: 'ACS International Student Chapter, Gopalganj Science and Technology University',
+      alternateName: 'ACS Student Chapter, GSTU',
+      url: SITE,
+      logo: `${SITE}ico/favicon-512.png`,
+      email: 'acs.bsmrstu@gmail.com',
+      sameAs: [
+        'https://www.facebook.com/acs.gstu',
+        'https://www.linkedin.com/company/acs-student-chapter-gstu',
+        'https://www.youtube.com/@acs.gstu',
+        'https://www.instagram.com/acs.gstu/',
+        'https://twitter.com/acsgstu',
+      ],
+    },
+  ],
+};
 const DEFAULT_SHARE_IMAGE = 'images/optimized/slide01-1600.webp';
 /** Absolute share-image URL for link previews (uploaded or bundled images only). */
 function shareImage(src) {
@@ -188,9 +218,9 @@ function page(filename, { title, description, body, active, view, attrs = {}, ad
   const head = [
     '<meta charset="utf-8">',
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
-    `<title>${h(title)} | ACS Student Chapter, GSTU</title>`,
+    `<title>${h(filename === 'index.html' ? title : `${title} | ACS Student Chapter, GSTU`)}</title>`,
     `<meta name="description" content="${h(description)}">`,
-    '<meta name="theme-color" content="#323fa0">',
+    '<meta name="theme-color" content="#412bfd">',
     `<link rel="canonical" href="${canonical}">`,
     `<meta property="og:title" content="${h(title)}">`,
     `<meta property="og:description" content="${h(description)}">`,
@@ -200,7 +230,12 @@ function page(filename, { title, description, body, active, view, attrs = {}, ad
     `<meta property="og:image" content="${h(shareImage(image))}">`,
     '<meta name="twitter:card" content="summary_large_image">',
     admin || filename === '404.html' || filename === 'form.html' ? '<meta name="robots" content="noindex,nofollow">' : '',
-    '<link rel="icon" href="ico/favicon.png">',
+    '<link rel="icon" type="image/png" sizes="48x48" href="ico/favicon-48.png">',
+    '<link rel="icon" type="image/png" sizes="96x96" href="ico/favicon-96.png">',
+    '<link rel="icon" type="image/png" sizes="192x192" href="ico/favicon-192.png">',
+    '<link rel="apple-touch-icon" href="ico/apple-touch-icon.png">',
+    '<link rel="manifest" href="site.webmanifest">',
+    filename === 'index.html' ? `<script type="application/ld+json">${JSON.stringify(siteSchema)}</script>` : '',
     `<link rel="stylesheet" href="css/${cssName}">`,
     active === 'index' ? `<link rel="preload" as="image" href="${h(firstHeroImage())}" fetchpriority="high">` : '',
     scripts,
@@ -218,8 +253,9 @@ const sourcePage = (name) => read(`src/pages/${name}.html`);
 // Home: hero images, the open-event button and membership details are baked in and refreshed live.
 const openEvent = renderOpenEvent(data);
 page('index.html', {
-  title: 'ACS Student Chapter, GSTU',
-  description: 'The ACS Student Chapter at GSTU: connect, learn, and grow.',
+  title: 'ACS Student Chapter, GSTU | American Chemical Society at Gopalganj Science and Technology University',
+  description:
+    'The American Chemical Society (ACS) International Student Chapter at Gopalganj Science and Technology University (GSTU): chemistry events, workshops, membership and certificates.',
   active: 'index',
   body: sourcePage('index')
     .replace('{{openEventHidden}}', openEvent ? '' : ' hidden')
@@ -312,6 +348,21 @@ page('404.html', {
 for (const dir of ['images', 'ico', 'fonts'])
   fs.cpSync(dir, path.join(publicRoot, dir), { recursive: true, filter: (f) => !path.basename(f).startsWith('.') });
 fs.copyFileSync('google3d74b2f79116caad.html', path.join(publicRoot, 'google3d74b2f79116caad.html'));
+write(
+  'site.webmanifest',
+  JSON.stringify({
+    name: 'ACS Student Chapter, GSTU',
+    short_name: 'ACS GSTU',
+    start_url: '/',
+    display: 'browser',
+    background_color: '#ffffff',
+    theme_color: '#412bfd',
+    icons: [
+      { src: 'ico/favicon-192.png', sizes: '192x192', type: 'image/png' },
+      { src: 'ico/favicon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+  }),
+);
 // End-to-end tests point the browser code at the local emulators instead of the live project.
 const siteConfig = process.env.FIRESTORE_ORIGIN
   ? {
