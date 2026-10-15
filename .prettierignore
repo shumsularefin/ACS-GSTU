@@ -1,0 +1,4 @@
+js/vendor/
+public/
+playwright-report/
+test-results/
