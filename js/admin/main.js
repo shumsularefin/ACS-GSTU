@@ -304,7 +304,17 @@ async function activate(user) {
   }
   app.drafts = createDrafts(user.uid, () => renderChrome());
   $('#ed-signin-status').textContent = 'Loading chapter content…';
-  app.data = await app.cloud.load(app.role);
+  try {
+    app.data = await app.cloud.load(app.role);
+  } catch (error) {
+    if (error?.code !== 'permission-denied') throw error;
+    // The account has a role, so a refusal here means the database still runs rules older than this dashboard.
+    $('#ed-signin-status').innerHTML =
+      `Signed in as <strong>${h(user.email)}</strong> (${h(roleInfo[app.role].label)}). The website’s security rules have not been updated for this dashboard yet. Deploy <code>firestore.rules</code> (DEPLOYMENT.md, rollout step 2), then reload this page.`;
+    $('#ed-sign-in').hidden = true;
+    $('#ed-signin-out').hidden = false;
+    return;
+  }
   $('#ed-signin').hidden = true;
   $('#ed-shell').hidden = false;
   route();

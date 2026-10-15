@@ -127,3 +127,6 @@
 
 /* Phones: keep the university name readable below the registration button. */
 @media (max-width:760px){.home-page .hero-actions .slide-btn{display:block!important;order:2;width:100%;padding-left:0}.home-page .hero-actions .slide-btn a{flex-wrap:nowrap;gap:10px}.home-page .hero-actions .slide-btn .lines,.home-page .hero-actions .slide-btn svg{display:none}.home-page .hero-actions .slide-btn b{font-size:13px;line-height:1.45;font-weight:500;max-width:300px}}
+
+/* Inner pages: one doodle layer (on <main>). The theme's own section patterns would stack a second copy. */
+.inner-page main .news,.inner-page main .hello,.inner-page main .clients,.inner-page main .intro{background:transparent}

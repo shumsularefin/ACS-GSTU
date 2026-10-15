@@ -19,7 +19,8 @@
   --ed-shadow: 0 1px 2px rgb(20 30 70 / 6%), 0 4px 16px rgb(20 30 70 / 5%);
 }
 
-.editor-body main#main { background: var(--ed-bg); background-image: none; padding: 0; }
+/* Same doodle watermark as the other pages; cards stay white for readability. */
+.editor-body main#main { background-color: var(--ed-bg); background-image: url(../images/brand/site-texture.svg); background-size: 1250px auto; background-repeat: repeat; padding: 0; }
 .editor-body .footer { margin-top: 0; }
 /* The theme clips every <section>; the dashboard needs visible overflow for its sticky sidebar. */
 .ed, .ed section { overflow: visible; }
