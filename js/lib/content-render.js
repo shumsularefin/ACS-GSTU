@@ -176,7 +176,7 @@ export function renderMembership(data) {
   const apply = m.applicationUrl || 'mailto:' + m.contactEmail;
   const renew = m.renewalUrl || 'mailto:' + m.contactEmail + '?subject=Chapter%20membership%20renewal';
   const benefits = m.benefits.map((v) => `<li>${h(v)}</li>`).join('');
-  return `<div class="wrap membership-grid"><div class="membership-pitch"><p class="eyebrow">Join us now</p><h2>Start your journey with us</h2><p class="lead">${h(m.intro)}</p><div class="membership-actions"><a class="btn btn-primary" href="${h(apply)}">Join now ↗</a><a class="btn btn-outline" href="${h(renew)}">${m.renewalUrl ? 'Renew membership ↗' : 'Ask about renewal'}</a></div></div><div class="membership-card"><h3>Why join?</h3><ul class="check-list">${benefits}</ul><details class="home-membership-details"><summary>Membership benefits &amp; renewal</summary><div><h4>Who can join?</h4><p>${h(m.eligibility)}</p><h4>General membership</h4><p>${h(m.general)}</p><h4>Premium membership</h4><p>${h(m.premium)}</p><h4>Renew your membership</h4><p>${h(m.renewal)}</p></div></details></div></div>`;
+  return `<div class="wrap membership-grid"><div class="membership-pitch"><p class="eyebrow">Join us now</p><h2>Start your journey with us</h2><p class="lead">${h(m.intro)}</p><div class="membership-actions"><a class="btn btn-primary" href="${h(apply)}">Join now →</a><a class="btn btn-outline" href="${h(renew)}">${m.renewalUrl ? 'Renew membership' : 'Ask about renewal'}</a></div></div><div class="membership-card"><h3>Why join?</h3><ul class="check-list">${benefits}</ul><details class="home-membership-details"><summary>Membership benefits &amp; renewal</summary><div><h4>Who can join?</h4><p>${h(m.eligibility)}</p><h4>General membership</h4><p>${h(m.general)}</p><h4>Premium membership</h4><p>${h(m.premium)}</p><h4>Renew your membership</h4><p>${h(m.renewal)}</p></div></details></div></div>`;
 }
 
 /** Homepage: the next upcoming events, then the most recent ones (three cards). */
@@ -188,12 +188,32 @@ export function renderEventHighlights(data, now = new Date()) {
   return `<div class="highlight-grid">${list
     .map(
       (e) =>
-        `<a class="highlight-card" href="${eventHref(e)}" data-reveal><div class="highlight-media">${photo(e.image, e.title)}<span class="chip">${eventPast(e, now) ? 'Past event' : eventOpen(e, now) ? 'Registration open' : 'Upcoming'}</span></div><div class="highlight-body"><span class="event-kind">${categories[e.category]}</span><h3>${h(e.title)}</h3><time datetime="${e.date}">${eventDateLabel(e)}</time></div></a>`,
+        `<a class="highlight-card" href="${eventHref(e)}" data-reveal><div class="highlight-media">${photo(e.image, e.title)}<span class="chip">${eventPast(e, now) ? 'Past event' : eventOpen(e, now) ? 'Registration open' : 'Upcoming'}</span></div><div class="highlight-body"><span class="event-kind">${categories[e.category]}</span><h3>${h(e.title)}</h3><time datetime="${e.date}">${eventDateLabel(e)}</time><span class="arrow-circle" aria-hidden="true">→</span></div></a>`,
     )
     .join('')}</div>`;
 }
 
 /** The pill button on the homepage hero for the next event open for registration. */
+/** Photos for the homepage collage: the editable homepage images first, then member and event photos. */
+export function heroPhotos(data) {
+  const members = [...data.team.founders, ...Object.values(data.team.committees).flatMap((c) => c.members)];
+  // The bundled default hero artwork is not a photo, so it is left out of the collage.
+  const own = data.homepage.images.filter((src) => !/slide01/.test(src));
+  return [...new Set([...own, ...members.map((m) => m.image), ...data.events.map((e) => e.image)].filter(Boolean))];
+}
+
+const TILES = ['circle', 'diamond', 'round', 'round', 'circle', 'diamond'];
+/** Six shaped photo tiles (circles, rounded squares and diamonds) around the hero headline. */
+export function renderHeroTiles(data) {
+  const photos = heroPhotos(data);
+  if (!photos.length) return '';
+  return TILES.map((shape, i) => {
+    const src = photos[i % photos.length];
+    const image = photo(src, '').replace('loading="lazy"', 'loading="eager"');
+    return `<div class="hero-tile tile-${shape} t${i + 1}" data-tile="${i}">${image}</div>`;
+  }).join('');
+}
+
 export function renderOpenEvent(data, now = new Date()) {
   const open = data.events.filter((e) => eventOpen(e, now)).sort((a, b) => a.date.localeCompare(b.date));
   if (!open.length) return '';

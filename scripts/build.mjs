@@ -19,6 +19,7 @@ import {
   renderMembership,
   renderOpenEvent,
   renderEventHighlights,
+  renderHeroTiles,
 } from '../js/lib/content-render.js';
 import { firestoreREST } from '../js/lib/firestore-rest.js';
 import { loadPublished } from '../js/lib/content-store.js';
@@ -220,10 +221,10 @@ page('index.html', {
   description: 'The ACS Student Chapter at GSTU: connect, learn, and grow.',
   active: 'index',
   body: sourcePage('index')
-    .replace('{{heroImage}}', h(firstHeroImage()))
     .replace('{{openEventHidden}}', openEvent ? '' : ' hidden')
     .replace('{{openEvent}}', openEvent)
     .replace('{{membership}}', `<div id="editable-content" data-view="membership">${renderMembership(data)}</div>`)
+    .replace('{{heroTiles}}', renderHeroTiles(data))
     .replace('{{eventHighlights}}', renderEventHighlights(data))
     .replace('{{eventCount}}', String(data.events.length))
     .replace('{{teamYears}}', String(Object.keys(data.team.committees).length)),

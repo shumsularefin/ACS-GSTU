@@ -1,29 +1,18 @@
 <header class="header hero">
-  <div class="swiper-slider">
-    <div class="swiper-slide swiper-slide-active">
-      <div class="slide-inner bg-image" style="background-image:linear-gradient(90deg,rgba(15,32,78,.62),rgba(15,32,78,.18)),url({{heroImage}})">
-        <div class="hero-shapes" aria-hidden="true">
-          <svg class="hero-globe" viewBox="0 0 200 200"><circle cx="100" cy="100" r="92"/><path d="M100 8c-34 26-34 158 0 184M100 8c34 26 34 158 0 184M8 100c26-34 158-34 184 0M8 100c26 34 158 34 184 0"/><rect x="82" y="82" width="36" height="36" rx="9" transform="rotate(45 100 100)"/></svg>
-          <span class="hero-diamond d1"></span><span class="hero-diamond d2"></span><span class="hero-diamond d3"></span>
-          <span class="hero-orb o1"></span><span class="hero-orb o2"></span>
-        </div>
-        <div class="wrap hero-content">
-          <div class="tagline"><h6>American Chemical Society</h6></div>
-          <h1>STUDENT<br>
-            <span>CHAPTER</span></h1>
-          <p class="hero-lead">Connect, learn and grow with chemistry at Gopalganj Science and Technology University.</p>
-          <div class="hero-actions">
-            <div id="open-events" class="open-events"{{openEventHidden}}>{{openEvent}}</div>
-            <a class="btn btn-light" href="activities.html">Explore events</a>
-            <a class="btn btn-ghost" href="#membership">Become a member</a>
-          </div>
-          <div class="slide-btn"><a href="https://www.gstu.edu.bd/s/"><span class="uni-dot" aria-hidden="true"></span><b>Gopalganj Science and Technology University, Gopalganj</b></a></div>
-        </div>
-      </div>
+  <div class="hero-collage" id="hero-collage" aria-hidden="true">{{heroTiles}}<span class="hero-spark s1"></span><span class="hero-spark s2"></span><span class="hero-spark s3"></span></div>
+  <div class="wrap hero-content">
+    <div class="tagline"><h6>American Chemical Society</h6></div>
+    <h1>STUDENT<br>
+      <span>CHAPTER</span></h1>
+    <p class="hero-lead">Connect, learn and grow with chemistry at Gopalganj Science and Technology University.</p>
+    <div class="hero-actions">
+      <div id="open-events" class="open-events"{{openEventHidden}}>{{openEvent}}</div>
+      <a class="btn btn-aqua" href="activities.html">Explore events <span class="play" aria-hidden="true"></span></a>
+      <a class="btn btn-ghost" href="#membership">Become a member</a>
     </div>
+    <div class="slide-btn"><a href="https://www.gstu.edu.bd/s/"><span class="uni-dot" aria-hidden="true"></span><b>Gopalganj Science and Technology University, Gopalganj</b></a></div>
   </div>
-  <div class="hero-controls" id="hero-controls" hidden><button id="hero-previous" type="button" aria-label="Previous homepage image">←</button><button id="hero-play" type="button" aria-label="Pause slideshow">Pause</button><span id="hero-position" aria-live="polite">1 / 1</span><button id="hero-next" type="button" aria-label="Next homepage image">→</button></div>
-  <a class="scroll-cue" href="#welcome" aria-label="Scroll to the next section"><span></span></a>
+  <div class="hero-controls" id="hero-controls" hidden><button id="hero-previous" type="button" aria-label="Show previous photos">←</button><button id="hero-play" type="button" aria-label="Pause slideshow">Pause</button><span id="hero-position" aria-live="polite">1 / 1</span><button id="hero-next" type="button" aria-label="Show next photos">→</button></div>
 </header>
 
 <section class="stats wrap" aria-label="Chapter at a glance">

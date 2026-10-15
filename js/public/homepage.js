@@ -1,49 +1,73 @@
-// Homepage hero: rotating feature images (editable in the dashboard) with Previous, Pause/Play
-// and Next controls, plus the "Explore new event & register" button for the next open event.
-import { renderOpenEvent } from '../lib/content-render.js';
+// Homepage hero: a collage of shaped photo tiles. The photos rotate through the tiles (homepage images
+// from the dashboard first, then event and member photos), with Previous, Pause/Play and Next controls.
+// Also keeps the "Explore new event & register" button current.
+import { renderOpenEvent, heroPhotos } from '../lib/content-render.js';
 import { bakedContent, renderReady } from './site-data.js';
 import { resolveImage } from './media.js';
 
 const INTERVAL = 6500;
-const OVERLAY = 'linear-gradient(90deg,rgba(15,32,78,.62),rgba(15,32,78,.18))';
 
 export function setupHomepage() {
-  const hero = document.querySelector('.home-page .slide-inner');
-  if (!hero) return;
+  const collage = document.getElementById('hero-collage');
+  if (!collage) return;
+  const tiles = [...collage.querySelectorAll('.hero-tile')];
   const controls = document.getElementById('hero-controls');
   const play = document.getElementById('hero-play');
   const counter = document.getElementById('hero-position');
   const feature = document.getElementById('open-events');
-  let images = [];
+  let photos = [];
   let position = 0;
   let paused = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let request = 0;
+
+  async function swap(img, src) {
+    if (img.getAttribute('src') === src) return;
+    const next = new Image();
+    next.src = src;
+    try {
+      await next.decode();
+    } catch {
+      return; // Keep the current photo when one cannot load.
+    }
+    img.classList.add('fading');
+    await new Promise((resolve) => setTimeout(resolve, paused ? 0 : 450));
+    img.removeAttribute('srcset');
+    img.src = src;
+    img.classList.remove('fading');
+  }
 
   async function show(index) {
-    if (!images.length) return;
-    position = (index + images.length) % images.length;
-    const selected = position;
-    let url;
-    try {
-      url = await resolveImage(images[position]);
-      const image = new Image();
-      image.src = url;
-      await image.decode();
-    } catch {
-      return; // Keep the current slide when an image cannot load.
-    }
-    if (selected !== position) return;
-    hero.style.backgroundImage = `${OVERLAY},url(${JSON.stringify(url)})`;
-    counter.textContent = `${position + 1} / ${images.length}`;
+    if (photos.length < 2) return;
+    position = (index + photos.length) % photos.length;
+    const current = ++request;
+    counter.textContent = `${position + 1} / ${photos.length}`;
+    await Promise.all(
+      tiles.map(async (tile, i) => {
+        const img = tile.querySelector('img');
+        if (!img) return;
+        let src;
+        try {
+          src = await resolveImage(photos[(position + i) % photos.length]);
+        } catch {
+          return;
+        }
+        if (current === request) await swap(img, src);
+      }),
+    );
   }
 
   function apply(data) {
-    const next = data.homepage.images;
-    if (JSON.stringify(next) !== JSON.stringify(images)) {
-      images = next;
+    const next = heroPhotos(data);
+    if (JSON.stringify(next) !== JSON.stringify(photos)) {
+      // The build already placed the first photos; only newer content (after a publish) redraws them.
+      const redraw = photos.length > 0;
+      photos = next;
       position = 0;
-      if (images.length > 1 || images[0]?.startsWith('media:')) show(0);
+      if (redraw) show(0);
     }
-    controls.hidden = images.length < 2;
+    // Rotation only makes sense when there are more photos than tiles.
+    controls.hidden = photos.length <= tiles.length;
+    counter.textContent = `${position + 1} / ${photos.length}`;
     const button = renderOpenEvent(data);
     feature.hidden = !button;
     if (feature.innerHTML !== button) feature.innerHTML = button;
@@ -61,7 +85,7 @@ export function setupHomepage() {
   document.getElementById('hero-previous').addEventListener('click', () => show(position - 1));
   document.getElementById('hero-next').addEventListener('click', () => show(position + 1));
   setInterval(() => {
-    if (!paused && !document.hidden && images.length > 1 && !controls.matches(':focus-within')) show(position + 1);
+    if (!paused && !document.hidden && photos.length > tiles.length && !controls.matches(':focus-within')) show(position + 1);
   }, INTERVAL);
 
   window.addEventListener('chapter-content', (e) => apply(e.detail));
