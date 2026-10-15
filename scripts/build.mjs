@@ -11,7 +11,15 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import * as esbuild from 'esbuild';
 import { normalizeContent, publicContent, escapeHTML as h, calendarICS, contentSignature } from '../js/lib/content-model.js';
-import { configureRender, renderEvents, renderEvent, renderTeam, renderMembership, renderOpenEvent } from '../js/lib/content-render.js';
+import {
+  configureRender,
+  renderEvents,
+  renderEvent,
+  renderTeam,
+  renderMembership,
+  renderOpenEvent,
+  renderEventHighlights,
+} from '../js/lib/content-render.js';
 import { firestoreREST } from '../js/lib/firestore-rest.js';
 import { loadPublished } from '../js/lib/content-store.js';
 
@@ -88,20 +96,13 @@ configureRender({ manifest: images, media, events: data.events.map((e) => e.id) 
 // ------------------------------------------------------------------ styles and scripts
 
 const hashed = (name, body, ext) => `${name}.${createHash('sha256').update(body).digest('hex').slice(0, 12)}.${ext}`;
-// The original theme stylesheet plus the chapter overrides, with the ACS palette applied.
-const theme = read('css/style.css')
-  .replace(/@import[^;]+;/g, '')
-  .replaceAll('url(../images/bg-noise.gif)', 'url(../images/bg-noise-static.webp)');
-const siteCSS = (read('css/original-fonts.css') + '\n' + theme + '\n' + read('css/site.css'))
-  .replace(/#01f7b6/gi, '#64ccc9')
-  .replace(/#01bfa5/gi, '#323fa0')
-  .replace(/#008c67/gi, '#323fa0');
+// Poppins font faces plus the site theme (ACS brand colours).
+const siteCSS = read('css/original-fonts.css') + '\n' + read('css/theme.css');
 const cssName = hashed('site', siteCSS, 'css');
 write(`css/${cssName}`, siteCSS);
 const adminCSS = read('css/admin.css');
 const adminCSSName = hashed('admin', adminCSS, 'css');
 write(`css/${adminCSSName}`, adminCSS);
-fs.copyFileSync('css/bootstrap.min.css', path.join(publicRoot, 'css/bootstrap.min.css'));
 
 const bundles = await esbuild.build({
   entryPoints: { site: 'js/public/site.js', certificates: 'js/public/certificates.js', admin: 'js/admin/main.js' },
@@ -198,7 +199,6 @@ function page(filename, { title, description, body, active, view, attrs = {}, ad
     '<meta name="twitter:card" content="summary_large_image">',
     admin || filename === '404.html' ? '<meta name="robots" content="noindex,nofollow">' : '',
     '<link rel="icon" href="ico/favicon.png">',
-    '<link rel="stylesheet" href="css/bootstrap.min.css">',
     `<link rel="stylesheet" href="css/${cssName}">`,
     active === 'index' ? `<link rel="preload" as="image" href="${h(firstHeroImage())}" fetchpriority="high">` : '',
     scripts,
@@ -223,7 +223,10 @@ page('index.html', {
     .replace('{{heroImage}}', h(firstHeroImage()))
     .replace('{{openEventHidden}}', openEvent ? '' : ' hidden')
     .replace('{{openEvent}}', openEvent)
-    .replace('{{membership}}', `<div id="editable-content" data-view="membership">${renderMembership(data)}</div>`),
+    .replace('{{membership}}', `<div id="editable-content" data-view="membership">${renderMembership(data)}</div>`)
+    .replace('{{eventHighlights}}', renderEventHighlights(data))
+    .replace('{{eventCount}}', String(data.events.length))
+    .replace('{{teamYears}}', String(Object.keys(data.team.committees).length)),
 });
 page('about.html', {
   title: 'Our story',

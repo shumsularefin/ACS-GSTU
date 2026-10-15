@@ -15,7 +15,7 @@ test('every page has the shared shell, one h1 and only local assets that exist',
     assert.equal((html.match(/<h1\b/g) || []).length, 1, file);
     assert.equal((html.match(/<main\b/g) || []).length, 1, file);
     assert.ok(html.includes('Skip to content'), file);
-    assert.ok(html.includes('<footer class="footer">'), file);
+    assert.ok(html.includes('<footer class="footer'), file);
     assert.ok(!/<script(?![^>]*src=)[^>]*>/.test(html), `${file}: no inline scripts (the CSP blocks them)`);
     for (const [, url] of html.matchAll(/(?:href|src)="([^"]+)"/g)) {
       if (/^(?:https?:|mailto:|tel:|#|data:)/.test(url) || url.includes('?')) continue;
@@ -24,11 +24,10 @@ test('every page has the shared shell, one h1 and only local assets that exist',
   }
 });
 
-test('the original theme, fonts and homepage content are kept', () => {
-  assert.equal(
-    createHash('sha256').update(read('css/style.css').replace(/\r\n/g, '\n')).digest('hex'),
-    '8476ff84c9cb5780dadf969abaa7ad6e92c23588ceafbbeee0b105942b4b65bc',
-  );
+test('the ACS brand theme, Poppins and the homepage content are in place', () => {
+  const theme = read('css/theme.css');
+  for (const token of ['--blue: #412bfd', '--aqua: #6fedee', '--yellow: #f8cd31', 'prefers-reduced-motion'])
+    assert.ok(theme.includes(token), token);
   const home = read('public/index.html');
   for (const text of [
     'STUDENT<br>',
@@ -37,13 +36,14 @@ test('the original theme, fonts and homepage content are kept', () => {
     'id="membership"',
     'Membership benefits &amp; renewal',
     'Gopalganj Science and Technology University',
+    'acs-chapter-lockup.svg',
   ])
     assert.ok(home.includes(text), text);
   assert.ok(home.includes('fetchpriority="high"'));
   assert.ok(home.includes('id="hero-controls"'));
-  assert.ok(!home.includes('Our Recent works and activities'));
-  const fonts = read('css/original-fonts.css');
-  for (const font of ['Poppins', 'Fjalla One', 'Dancing Script']) assert.ok(fonts.includes(font));
+  assert.ok(!home.includes('{{'), 'every template placeholder is filled');
+  assert.ok(!home.includes('bootstrap'), 'no Bootstrap');
+  assert.ok(read('css/original-fonts.css').includes('Poppins'));
 });
 
 test('one events page and one team page replace the per-year copies; old addresses redirect', () => {

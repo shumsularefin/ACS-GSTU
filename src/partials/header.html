@@ -1,24 +1,16 @@
 <a class="skip-link" href="#main">Skip to content</a>
-<div class="navigation-menu" id="site-menu" aria-label="Main navigation" inert>
-  <div class="bg-layers"> <span></span> <span></span> <span></span> <span></span> </div>
-  <div class="inner" data-tilt data-tilt-perspective="2000">
-   <div class="menu">
-    <ul>{{navigation}}</ul>
-    </div>
-    <blockquote>Let's create a chemistry community</blockquote>
-  </div>
-</div>
-<nav class="navbar">
-  <div class="left"> <a href="https://www.acs.org/">ACS</a> </div>
-  <div class="logo"> <a href="index.html"><img class="official-acs-logo" src="images/brand/acs-logo.svg" width="127" height="32" loading="eager" decoding="async" alt="American Chemical Society"></a> </div>
-  <div class="right">
-    <ul class="language">
-      <li><a href="https://www.facebook.com/acs.gstu">Student Chapter</a></li>
-    </ul>
-    <button type="button" class="hamburger-menu" id="menu-toggle" aria-controls="site-menu" aria-expanded="false"><b>MENU</b>
-      <span class="hamburger" id="hamburger-menu" aria-hidden="true"> <span></span> <span></span> <span></span> </span>
+<header class="site-header" id="site-header">
+  <div class="wrap header-row">
+    <a class="brand" href="index.html" aria-label="ACS Student Chapter, GSTU: home">
+      <img class="brand-color" src="images/brand/acs-chapter-lockup.svg" width="208" height="65" alt="American Chemical Society International Student Chapter, Gopalganj Science and Technology University">
+      <img class="brand-white" src="images/brand/acs-chapter-lockup-white.svg" width="208" height="65" alt="" aria-hidden="true">
+    </a>
+    <nav class="main-nav" id="site-menu" aria-label="Main navigation">
+      <ul>{{navigation}}</ul>
+      <a class="btn btn-primary nav-cta" href="index.html#membership">Join the chapter</a>
+    </nav>
+    <button type="button" class="menu-toggle" id="menu-toggle" aria-controls="site-menu" aria-expanded="false" aria-label="Open menu">
+      <span class="bars" id="hamburger-menu" aria-hidden="true"><span></span><span></span><span></span></span>
     </button>
   </div>
-</nav>
-<noscript><nav class="fallback-nav" aria-label="Navigation">{{navigation}}</nav></noscript>
-
+</header>

@@ -24,8 +24,9 @@
 .editor-body .footer { margin-top: 0; }
 /* The theme clips every <section>; the dashboard needs visible overflow for its sticky sidebar. */
 .ed, .ed section { overflow: visible; }
-.ed { font: 15px/1.55 Poppins, system-ui, sans-serif; color: var(--ed-ink); padding: 104px 0 48px; min-height: 80vh; }
+.ed { font: 15px/1.55 Poppins, system-ui, sans-serif; color: var(--ed-ink); padding: 32px 0 48px; min-height: 80vh; }
 .ed *, .ed *::before, .ed *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
 .ed h1, .ed h2, .ed h3 { font-family: Poppins, system-ui, sans-serif; color: var(--ed-ink); letter-spacing: 0; text-transform: none; }
 .ed h1::before, .ed h2::before, .ed h3::before, .ed h1::after, .ed h2::after, .ed h3::after { content: none !important; }
 .ed h3 { font-size: 18px; font-weight: 600; margin: 0 0 12px; line-height: 1.35; }
@@ -275,7 +276,7 @@
   .ed-welcome { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 900px) {
-  .ed { padding-top: 88px; }
+  .ed { padding-top: 20px; }
   .ed-shell { grid-template-columns: minmax(0, 1fr); padding: 0 16px; gap: 14px; }
   .ed-sidebar { position: static; max-height: none; padding: 12px; }
   .ed-nav-toggle { display: inline-flex; margin-left: auto; min-height: 36px; padding: 6px 12px; border: 1px solid var(--ed-line); border-radius: 8px; background: #fff; font: 600 13px Poppins, sans-serif; color: var(--ed-blue); cursor: pointer; }

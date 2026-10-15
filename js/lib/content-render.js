@@ -175,7 +175,22 @@ export function renderMembership(data) {
   const m = data.membership;
   const apply = m.applicationUrl || 'mailto:' + m.contactEmail;
   const renew = m.renewalUrl || 'mailto:' + m.contactEmail + '?subject=Chapter%20membership%20renewal';
-  return `<div class="container"><div class="row"><div class="col-12"><h6>Join Us Now!</h6><h2 data-text="Let's Begin">Start your journey with us</h2></div><div class="col-md-5"><h4>Do you want to be a part of our community?</h4><div class="custom-link"><a href="${h(apply)}"><div class="lines"><span></span><span></span></div><b>JOIN NOW</b></a></div></div><div class="col-md-7"><p>${h(m.intro)}</p><details class="home-membership-details"><summary>Membership benefits &amp; renewal</summary><div><h3>Why join?</h3><ul>${m.benefits.map((v) => `<li>${h(v)}</li>`).join('')}</ul><h3>Who can join?</h3><p>${h(m.eligibility)}</p><h3>General membership</h3><p>${h(m.general)}</p><h3>Premium membership</h3><p>${h(m.premium)}</p><h3>Renew your membership</h3><p>${h(m.renewal)}</p><a class="button" href="${h(renew)}">${m.renewalUrl ? 'Renew membership ↗' : 'Ask about renewal'}</a></div></details></div></div></div>`;
+  const benefits = m.benefits.map((v) => `<li>${h(v)}</li>`).join('');
+  return `<div class="wrap membership-grid"><div class="membership-pitch"><p class="eyebrow">Join us now</p><h2>Start your journey with us</h2><p class="lead">${h(m.intro)}</p><div class="membership-actions"><a class="btn btn-primary" href="${h(apply)}">Join now ↗</a><a class="btn btn-outline" href="${h(renew)}">${m.renewalUrl ? 'Renew membership ↗' : 'Ask about renewal'}</a></div></div><div class="membership-card"><h3>Why join?</h3><ul class="check-list">${benefits}</ul><details class="home-membership-details"><summary>Membership benefits &amp; renewal</summary><div><h4>Who can join?</h4><p>${h(m.eligibility)}</p><h4>General membership</h4><p>${h(m.general)}</p><h4>Premium membership</h4><p>${h(m.premium)}</p><h4>Renew your membership</h4><p>${h(m.renewal)}</p></div></details></div></div>`;
+}
+
+/** Homepage: the next upcoming events, then the most recent ones (three cards). */
+export function renderEventHighlights(data, now = new Date()) {
+  const upcoming = data.events.filter((e) => !eventPast(e, now)).sort((a, b) => a.date.localeCompare(b.date));
+  const recent = data.events.filter((e) => eventPast(e, now)).sort((a, b) => b.date.localeCompare(a.date));
+  const list = [...upcoming, ...recent].slice(0, 3);
+  if (!list.length) return '<p class="empty-state">Events will be announced here soon.</p>';
+  return `<div class="highlight-grid">${list
+    .map(
+      (e) =>
+        `<a class="highlight-card" href="${eventHref(e)}" data-reveal><div class="highlight-media">${photo(e.image, e.title)}<span class="chip">${eventPast(e, now) ? 'Past event' : eventOpen(e, now) ? 'Registration open' : 'Upcoming'}</span></div><div class="highlight-body"><span class="event-kind">${categories[e.category]}</span><h3>${h(e.title)}</h3><time datetime="${e.date}">${eventDateLabel(e)}</time></div></a>`,
+    )
+    .join('')}</div>`;
 }
 
 /** The pill button on the homepage hero for the next event open for registration. */

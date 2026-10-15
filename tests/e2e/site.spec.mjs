@@ -118,6 +118,7 @@ test('roster members show by name only; membership IDs stay private', async ({ b
 
   const visitor = await browser.newPage();
   await visitor.goto('/team.html?year=2026');
+  await visitor.waitForLoadState('networkidle');
   await visitor.getByText('Show chapter roster · 2026').click();
   await expect(visitor.locator('.roster-body')).toContainText('Test Member');
   expect(await visitor.content()).not.toContain('00042');
@@ -234,7 +235,17 @@ test('the dashboard and public pages fit a phone screen', async ({ browser }) =>
     await expect(page.locator('#ed-view')).not.toBeEmpty();
     const wide = await page.evaluate(() =>
       [...document.querySelectorAll('body *')]
-        .filter((el) => el.getBoundingClientRect().right > innerWidth + 1 && !el.closest('.ed-table-wrap, .ed-toasts, .navigation-menu'))
+        .filter(
+          (el) =>
+            el.getBoundingClientRect().right > innerWidth + 1 &&
+            !el.closest('.ed-table-wrap, .ed-toasts') &&
+            // Decorations clipped by an ancestor do not widen the page.
+            !(function clipped(node) {
+              for (let p = node.parentElement; p; p = p.parentElement)
+                if (/hidden|clip|auto|scroll/.test(getComputedStyle(p).overflowX)) return true;
+              return false;
+            })(el),
+        )
         .slice(0, 5)
         .map((el) => `${el.tagName}.${el.className} ${Math.round(el.getBoundingClientRect().right)}`),
     );
