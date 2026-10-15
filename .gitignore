@@ -1,25 +1,26 @@
-# Build output and local working material
+# Build output and test results
 /public/
+/test-results/
+/playwright-report/
+node_modules/
+
+# Local working material
 /output/
 /checks/
 /tmp/
 /original-site/
 /.firebase/
-/calendar/
-/*.html
-!/google3d74b2f79116caad.html
-/css/site.*.css
-/data/generated-pages.json
+/.claude/
 /tmp-*
 *.log
 .DS_Store
-node_modules/
+
+# Secrets and private exports (backups contain membership IDs)
 .env
 .env.*
 gha-creds-*.json
 *service-account*.json
 *.pem
 *.key
-
+acs-gstu-backup-*.json
 data/backups/
-node_modules

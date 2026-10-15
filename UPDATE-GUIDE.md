@@ -1,50 +1,60 @@
-# Updating the ACS GSTU website
+# Chapter Editor guide
 
-## Everyday editing
+Open https://acs-gstu.web.app/admin.html and choose **Sign in with Google** with the account the super-admin added. Allow pop-ups if the Google window does not appear.
 
-Open https://acs-gstu.web.app/admin.html and choose Sign in with Google. Use an account granted access by a super-admin. The latest published records load automatically.
+## The two steps
 
-- **Multi-day programs:** use Start date and optional End date. Calendar downloads include the final day. Leave times blank for all-day programs.
-- **Member order:** use the ↑ and ↓ buttons beside each person, then Publish website. The Team page follows this order.
-- **New event:** click New event, enter a permanent lowercase Event ID, title, date, category and description. Upload a thumbnail from your device if desired. The registration URL is optional. Super-admins click Save event changes, then Publish website. Outreach/administrator editors use Publish new event.
-- **Homepage images:** upload images from your device or add existing URLs. Each line is one slide, up to five. Remove a line to remove a slide. Super-admins save the section then Publish website; other editors save the section directly to the live site. Visitors get automatic rotation and Pause/Play controls.
-- **Membership information:** edit the Home page benefits and renewal fields, then save. Super-admins also click Publish website.
-- **Annual roster:** select General / premium roster, choose year and tier, upload a spreadsheet with Members Name and Membership ID, inspect the preview, then Add these members to changes and Publish website. Store IDs as text in Excel to preserve leading zeroes. Public names and tiers appear on Team; IDs remain private.
-- **Committee/founder:** select the record type and year, enter name, role and optional photo, then save and publish. Edit/Remove actions are beside existing records.
+1. **Edit** a section. Your changes are saved as a **draft in this browser** as you type ("Draft saved 12:03 · not live yet").
+2. **Publish** that section. Each section publishes on its own, so one unfinished form never blocks another.
 
-Sections start collapsed. Click the large + control or section heading to expand it. Publish website is the first section at the top. If publishing finds unsaved edits, it names each section and opens/highlights the first one; save that section, then publish. Certificate and editor-access inputs do not block website publishing. The section navigation reopens the selected section, and Back to top returns to the page header.
+The orange **unpublished drafts** button at the top lists every draft by name, with Open, Discard and Publish. **Publish all** publishes them one by one. If one has a problem, its section opens with the message shown and the others still go live.
 
-A notification confirms each action. If a form does not save, the notification identifies the invalid field. Saving an administrative draft is separate from publishing it. If another editor published first, export your changes, Reload live website, and reapply your changes.
+Visitors see published changes immediately. Search engines and link previews follow within about 15 minutes.
 
-## Issue one certificate
+If someone else published the same section while you were editing, you are asked whether to keep your version or load theirs.
 
-1. Choose the Certificate category first, then One recipient or Upload a participant list.
-2. Enter the recipient name and optional membership ID. For event certificates, select a saved event or enter its title and date.
-3. For executive service, enter the fiscal year/service term and optional office held. No event is required; service end date is optional.
-4. Click Preview certificates and check the spelling, dates, category and signatories.
-5. Check the confirmation and click Save and issue certificates. A recovery copy stays in this browser; Download optional backup JSON is available if you want a separate copy.
-6. Copy the recipient link shown after successful issuance. A person without a membership ID uses this link or their credential ID in Certificate Center to download the PDF.
+## Events
 
-No separate Publish website action is needed for certificates. Download sample PDF creates a marked preview, not a verified certificate. To issue a batch, choose Upload a participant list and upload the Excel/CSV/JSON list instead. If interrupted, reload the recovery JSON and retry: the existing credential IDs are preserved. Use Look up or revoke a certificate to invalidate an issued record; revocation keeps its history and prevents a valid download.
+- **Events → + New event.** Give it a title, category, start date, and an **end date** for events that run over several days. Times are optional and use Bangladesh time.
+- The **registration link is optional.** Set Registration to **Open** to show the "Explore new event & register" button on the homepage. It disappears by itself after the event ends.
+- **Upload from device** adds a photo; it is resized and optimized automatically. **Choose uploaded image** reuses one. You never type file paths.
+- **Preview** shows the event page before publishing.
+- Outreach editors can edit the events they added. Only a super-admin can delete events.
+- Super-admins can import many events from a spreadsheet: each becomes a draft to review and publish.
 
-Super-admins can use Manage Certificate Center event and service lists to remove an obsolete group from the public selector, then Publish website. Restore puts it back. Existing credential links keep working.
+## Homepage images and membership
 
-## Editor access
+- **Homepage images:** up to five slides. Reorder them with ↑ ↓, remove, upload or choose from the library, then Publish.
+- **Membership information:** the Join & renew section on the homepage. Put one benefit per line.
 
-Super-admins use Editor access & activity to add an email, select the role, and Save editor access. The person signs in with that Google account. Edit access changes the role or disables the grant; Delete access removes it. Neither deletes their Google account or activity history. The permanent owner is protected. Only give Super-admin to people trusted to manage chapter administration and other editors.
+## Team & rosters (super-admin)
 
-## Images and free hosting
+- Choose **Founding members** or a year, or **+ Add year**.
+- **Executive committee:** add members with a name, role and photo, reorder them, then Publish.
+- **General & premium roster:** add members one at a time, or **Import members from a spreadsheet**:
+  1. Download the template. It has two columns: Member Name and Membership ID. Type IDs as text to keep leading zeroes.
+  2. Choose the file, then the worksheet if there is more than one, and the tier.
+  3. Review: the wizard tells you how many members will be added and which will be updated (matched by membership ID).
+  4. **Add to draft**, then Publish.
+- Membership IDs are private. The Team page shows names and tiers only.
 
-Uploaded images have an automatic media: reference. Leave it unchanged: it is not a filename and does not require a GitHub upload. The photo preview confirms the selected image.
+## Certificates
 
-The upload control compresses JPG, PNG and WebP images and stores small image records in Firestore, avoiding paid Cloud Storage. Uploaded images are public website assets; do not upload private documents. The image library can reuse uploads or delete unused ones. Remove an image from published content before deleting it. Firestore storage, read and transfer quotas still apply; monitor Firebase Usage as traffic grows. Original full-resolution files should be kept separately.
+**Issue certificates** walks you through four steps:
 
-## Code and design changes
+1. **Category:** participation, champion, first or second runner-up, achievement, formal recognition (instructor, teacher, guest, delegate, institution, organization), or executive service. Your role decides which are available.
+2. **Details:** only the fields that apply. Event certificates ask for the event. **Executive service asks for the fiscal year** (and optionally the office) and needs no event or membership ID.
+3. **Recipients:** one person, or a spreadsheet with Name and optional Membership ID, Designation and Achievement (download the template).
+4. **Review & issue:** check the table and the preview, tick the confirmation, then **Issue**.
 
-Invite developers in GitHub repository Settings → Collaborators. This is separate from dashboard access. A developer clones https://github.com/shumsularefin/ACS-GSTU, uses Node.js 24, runs npm run build and npm test, and previews with npm run preview. Edit src/pages, src/partials, css/site.css and js modules. Do not edit generated public files directly. Push reviewed changes to main; GitHub Actions runs checks and deploys Hosting. Check the Actions tab for the green deployment result. Do not commit member spreadsheets, private backups or credentials.
+When it finishes you get each recipient's link, a Copy link button, a PDF download, and a CSV of all links. Recipients with a membership ID can also find their certificate in the **Certificate Center** by choosing the event and entering their ID. Every certificate has its own credential ID and a QR code that opens its verification page.
 
-Dashboard content lives in Firestore and is not replaced by a normal Hosting deployment. Security-rule changes are reviewed and deployed separately. Keep private content backups and certificate batch exports. Use Firebase Hosting release history to roll back a design/code release if necessary; that does not roll back database edits.
+- **Find or revoke:** look up a credential ID. Super-admins can revoke; the verification page then says "revoked".
+- **Certificate Center list** (super-admin): hide test or temporary events from the public list.
+- **Issued records** (super-admin): every certificate issued, with its status.
 
-## Facebook
+## Your account, editors and backups
 
-The site can link to Facebook event posts. Automatic Facebook-to-site publishing is not connected. A reliable integration requires chapter Page access, the applicable Meta API permissions and a securely managed token/refresh process; do not place a Page access token in public JavaScript. Continue entering event details in the dashboard unless a separate authorized integration is set up.
+- **Your account & sign-in:** shows your role and exactly what you can do. Signing out keeps your drafts in this browser.
+- **Manage editors & activity** (super-admin): add, change, disable or remove editors, and read the activity log: who changed what and when, with server times.
+- **Backups** (super-admin): download all published content as JSON or Excel. It includes private IDs, so keep it safe. Restoring a backup loads it into drafts for review.

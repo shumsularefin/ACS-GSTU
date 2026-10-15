@@ -20,14 +20,14 @@
   <div class="swiper-slider">
     <div class="swiper-wrapper">
       <div class="swiper-slide swiper-slide-active" data-tilt data-tilt-max="5" data-tilt-speed="500" data-tilt-perspective="1500">
-        <div class="slide-inner bg-image" style="background-image:url(images/optimized/slide01-1600.webp)">
+        <div class="slide-inner bg-image" style="background-image:linear-gradient(90deg,rgba(15,32,78,.62),rgba(15,32,78,.18)),url({{heroImage}})">
           <div class="container">
             <div class="tagline">
               <h6>American Chemical Society</h6>
             </div>
             <h1>STUDENT<br>
               <span>CHAPTER</span></h1>
-              <div class="slide-btn"> <a href="https://www.gstu.edu.bd/s/">
+              <div class="hero-actions"><div class="slide-btn"> <a href="https://www.gstu.edu.bd/s/">
                 <div class="lines"> <span></span> <span></span> </div>
                 <!-- end lines -->
                 <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
@@ -35,7 +35,7 @@
                   <circle class="video-play-circle" fill="none" stroke="#fff" stroke-width="2" stroke-miterlimit="1" cx="52" cy="52" r="50"/>
                 </svg>
                 <b>Gopalganj Science and Technology University, Gopalganj</b>
-              </a> </div>
+              </a> </div><div id="open-events" class="open-events"{{openEventHidden}}>{{openEvent}}</div></div>
           <!-- end container --> 
         </div>
         <!-- end slide-inner --> 
@@ -46,7 +46,6 @@
   <!-- end swiper-slider --> 
 <div class="hero-controls" id="hero-controls" hidden><button id="hero-previous" type="button" aria-label="Previous homepage image">←</button><button id="hero-play" type="button" aria-label="Pause slideshow">Pause</button><span id="hero-position" aria-live="polite">1 / 1</span><button id="hero-next" type="button" aria-label="Next homepage image">→</button></div>
 </header>
-<section id="open-events" class="open-events" hidden></section><script type="module" src="js/homepage.js"></script>
 <section class="intro">
   <div class="container">
     <div class="row">

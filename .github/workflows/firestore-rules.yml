@@ -1,0 +1,56 @@
+name: Deploy Firestore security rules
+
+# Started by hand (Actions → Deploy Firestore security rules → Run workflow) from main.
+# The "firestore-rules" environment requires approval by the repository owner before deploying.
+# It uses its own service account, which can only change security rules (not Hosting or data).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firestore-rules
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - name: Security rules (Firestore emulator)
+        run: npm run test:rules
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: firestore-rules
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - uses: google-github-actions/auth@v3
+        with:
+          project_id: acs-gstu
+          workload_identity_provider: projects/492197583844/locations/global/workloadIdentityPools/github-deploy/providers/github-repository
+          service_account: github-rules@acs-gstu.iam.gserviceaccount.com
+      - name: Deploy Firestore rules
+        run: npx firebase deploy --only firestore:rules --project acs-gstu --non-interactive

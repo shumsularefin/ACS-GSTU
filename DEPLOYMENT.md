@@ -1,52 +1,64 @@
-# Website ownership and deployment
+# Deployment, access and maintenance
 
-Main website: https://acs-gstu.web.app/
+Main website: https://acs-gstu.web.app/ (https://acs-gstu.firebaseapp.com serves the same site; pages point search engines to web.app).
 Repository: https://github.com/shumsularefin/ACS-GSTU
 
-## Everyday editing
+## What happens automatically
 
-Use `/admin.html` to edit events, committees, public rosters, membership information and certificate batches. Sign in with an authorized Google account. Save form changes, review, and publish. Published content and issued certificates are stored in Firestore; a GitHub deployment does not overwrite that database.
+| Event | Workflow | Result |
+| --- | --- | --- |
+| Pull request to `main` | Website checks | Unit, site, security-rules and end-to-end tests. Nothing is deployed. |
+| Push to `main` | Website checks → deploy | After all checks pass, the site is built from the published Firestore content and deployed to Hosting. |
+| Every 15 minutes | Freshness → deploy | When editors published something since the last deploy, the site is rebuilt and redeployed (no code checks; the code has not changed). |
+| Manual (Actions tab) | Deploy Firestore security rules | Runs the rules tests, waits for approval, then deploys `firestore.rules` only. |
 
-The `firebaseapp.com` address serves the same site; `web.app` is the public canonical address. Sign in with Google uses a popup. Allow popups for the site. Browser drafts and login sessions are separate per domain; export drafts before switching domains. Never put credentials into source files.
+Hosting deployment uses short-lived Google credentials (Workload Identity Federation). No key is stored in GitHub. The Hosting account cannot change Firestore rules or data, and the rules account cannot change Hosting.
 
-To invite chapter editors, sign in as the super-admin, open Editor access & activity, enter their Google email, choose a role and save. They can then use Sign in with Google. Disable access in the same form when their term ends.
+GitHub pauses scheduled workflows in public repositories after 60 days without commits. If the site stops picking up published changes for search engines, open the Actions tab and re-enable the workflow. Visitors still see published changes right away regardless.
 
-To invite developers, open GitHub repository Settings > Collaborators > Add people. Give access only to trusted developers; changes pushed to main publish the website. Prefer feature branches and pull requests, review changes before merging, and configure branch protection if available for the repository. Developer repository access and chapter-editor access are separate. GitHub collaborators do not need Firebase console access for the configured Hosting deployment.
+## One-time setup for the rules workflow
 
-## Change the website
+These steps need your Google Cloud and GitHub owner accounts.
 
-Use Node 24. No dependency installation is required to build this static site.
+1. **Service account for rules.** In Google Cloud Console → IAM → Service accounts (project `acs-gstu`), create `github-rules`. Grant it **Firebase Rules Admin** (`roles/firebaserules.admin`) and **Service Usage Consumer** only.
+2. **Let the repository use it.** On the `github-rules` service account → Permissions, grant **Workload Identity User** to the same repository principal already used for `github-hosting`:
+   `principalSet://iam.googleapis.com/projects/492197583844/locations/global/workloadIdentityPools/github-deploy/attribute.repository/shumsularefin/ACS-GSTU`
+   (copy the exact member string from the existing `github-hosting` binding).
+3. **Approval gate.** In GitHub → Settings → Environments, create `firestore-rules`. Add yourself as a required reviewer and allow only the `main` branch.
+4. Recommended: under Settings → Branches, protect `main`: require pull requests and the "check" status.
 
-```sh
-npm run build
-npm test
-npm run preview
-```
+## Rolling out this version (one time, in this order)
 
-Edit `src/pages/`, `src/partials/`, `css/site.css`, and the active modules in `js/`. `data/` contains the initial public content. Images and fonts are bundled locally. `public/`, root HTML pages and hashed CSS are generated. The build recreates `public/` and excludes old deployment files.
+1. Merge the pull request. The site deploys and keeps working on the current data.
+2. Deploy the new rules: Actions → **Deploy Firestore security rules** → Run workflow → approve. (Before the rules workflow is set up, an owner can run `npx firebase deploy --only firestore:rules --project acs-gstu` locally instead.)
+   From this moment, public certificate records that still contain a membership ID stop being publicly readable. That closes the privacy gap. Their verification pages say "being moved" until step 4.
+3. The super-admin signs in at `/admin.html` and clicks **Upgrade storage now**. This copies events, pages, teams and private roster IDs into the new layout. The old record is kept unchanged as a backup.
+4. In **Certificates → Issued records**, click **Update N certificates**. This moves membership IDs from older certificates into private storage. Every credential ID, link and QR code keeps working.
+5. Within 15 minutes the scheduled build picks up the new layout (or run the website workflow by hand).
 
-Push source changes to `main`. GitHub Actions builds and tests the site, then deploys Hosting to Firebase project `acs-gstu`. Pull requests run checks only. Failed tests prevent deployment. See the repository's Actions tab for the result. The deployment uses short-lived Google credentials scoped to this repository's main branch; no service-account key is stored in GitHub.
+## Editor access
 
-Firestore rules are intentionally not changed by website pushes. Review and separately test permission changes before deploying them. The Hosting deployment account has no Firestore editing permission.
+The super-admin manages access in **Manage editors & activity**. Enter a Google account email, choose a role, and save. Disable or remove access when a term ends; the activity log keeps the history.
 
-## Free-tier operation
+| Role | Can do |
+| --- | --- |
+| Super-admin | Everything: content, committees and rosters, all certificates, revocation, Certificate Center list, editors, activity log, backups |
+| Chapter administrator | Events (any), homepage images, membership information, certificates except executive recognition |
+| Outreach editor | Homepage images, membership information, add events and edit their own, participant certificates |
 
-This is Firebase Hosting, Authentication and Firestore, not App Hosting. It uses no Cloud Functions or Cloud Storage. PDF generation and Excel imports run in the browser. Free-tier quotas still apply. Registration uses external form links supplied by chapter editors.
+`muhammadshamsularefin01@gmail.com` is the permanent super-admin and cannot be changed or removed. Only Google sign-in is accepted; the rules check this on the server.
 
-## Backup and recovery
+## Developer access
 
-Keep source history in GitHub. Export dashboard content backups and certificate batch JSON before issuing; retain these privately, outside this public repository. The source ZIP contains no private participant workbook or database export. Existing credential links and `verify.html` remain supported.
+GitHub collaborators are separate from dashboard editors. Add developers in GitHub → Settings → Collaborators. Ask them to work on branches and open pull requests; a merge to `main` deploys.
 
-For a Hosting rollback, use Firebase Console > Hosting > release history > Roll back. This restores website files only, not Firestore content. To restore public content, import an exported dashboard backup and publish it. Revoked certificates cannot be silently reissued with the same credential ID.
+## Free-tier limits (Spark plan)
 
-## One-time GitHub trust setup
+Firestore allows 50,000 reads and 20,000 writes per day for free. A visitor usually costs one read every five minutes (the freshness check). Uploaded images are baked into the site, so they cost nothing after the next build. Each uploaded image is stored at up to about 280 KB.
 
-The workflow expects pool `github-deploy`, provider `github-repository`, and service account `github-hosting@acs-gstu.iam.gserviceaccount.com` in project number `492197583844`. The provider must restrict access to repository ID `1383031064`, repository `shumsularefin/ACS-GSTU`, and ref `refs/heads/main`. Grant only Firebase Hosting Admin and Service Usage Consumer to the deployment account. Grant Workload Identity User to the matching repository principal.
+## Backups and rollback
 
-Reference: https://github.com/google-github-actions/auth and https://firebase.google.com/docs/hosting/github-integration
-
-## Import an annual member roster
-
-Sign in as the super-admin. In People & annual rosters, select General / premium roster, the year, and membership tier. Download the member template, fill Members Name and Membership ID, then upload it. Check the preview and click Add these members to changes. Finally click Publish website. Role and photo fields apply only to executive/founding records. Membership IDs retain leading zeroes when stored as spreadsheet text, and are stored in the private roster document, not on the public Team page.
-
-Live content loads automatically after sign-in. Save each edited form, then click Publish website. Backups and saved drafts are optional recovery tools. A publication conflict requires reloading live content and reapplying your changes. Exported backups contain private IDs: do not commit them to GitHub.
+- Content backups: Chapter Editor → Backups → Download backup. This includes private membership IDs, so keep it private and never commit it.
+- Restoring a backup loads it into drafts for review; nothing goes live until it is published.
+- Hosting rollback: Firebase Console → Hosting → Release history → Roll back. This restores the website files only, not Firestore content.
+- Certificates are never deleted. Revocation is permanent and shown on the verification page.

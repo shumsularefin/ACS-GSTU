@@ -1,0 +1,183 @@
+// HTML renderers shared by the static build and the browser (fresh content after a publish).
+import { categories, escapeHTML as h, eventOpen, eventPast, googleCalendarURL, calendarICS, validDate, TIMEZONE } from './content-model.js';
+
+let imageManifest = {};
+let bakedMedia = {};
+let bakedEvents = null;
+
+/**
+ * manifest: responsive variants for bundled images (data/image-manifest.json)
+ * media: uploaded image reference -> baked file path (media:<id> -> media/<id>.jpg)
+ * events: IDs that have their own static page (event-<id>.html)
+ */
+export function configureRender({ manifest, media, events } = {}) {
+  if (manifest) imageManifest = manifest;
+  if (media) bakedMedia = media;
+  if (events) bakedEvents = new Set(events);
+}
+
+export const latestYear = (data) => Math.max(2024, ...data.events.map((e) => Number(e.date.slice(0, 4))));
+
+export const eventHref = (e) =>
+  !bakedEvents || bakedEvents.has(e.id) ? `event-${e.id}.html` : `event.html?id=${encodeURIComponent(e.id)}`;
+export const eventsHref = (year, type = 'all') => `activities.html?year=${year}&type=${type}`;
+export const teamHref = (year) => (year === 'founders' ? 'team.html' : `team.html?year=${year}`);
+
+export const dateLabel = (value) =>
+  new Date(value + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+const timeLabel = (iso) => new Date(iso).toLocaleString('en-GB', { timeZone: TIMEZONE, hour: 'numeric', minute: '2-digit', hour12: true });
+
+/** "12 March 2026" or "12 March 2026 – 14 March 2026" for multi-day events. */
+export function eventDateLabel(e) {
+  const end = e.endsAt
+    ? validDate(e.endsAt)
+      ? e.endsAt
+      : new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format(new Date(e.endsAt))
+    : e.date;
+  return dateLabel(e.date) + (end !== e.date ? ' – ' + dateLabel(end) : '');
+}
+
+function imageSource(src) {
+  if (src?.startsWith('media:')) return bakedMedia[src] ? { src: bakedMedia[src] } : null;
+  const variants = imageManifest[src];
+  const image = variants?.[Math.min(1, variants.length - 1)];
+  return { src: image?.src || src, variants, width: image?.width, height: image?.height };
+}
+
+export function photo(src, alt, cls = '') {
+  if (!src) return '<div class="member-placeholder" aria-hidden="true">ACS</div>';
+  const image = imageSource(src);
+  // Uploaded images not yet baked into the site are fetched by js/public/media.js.
+  if (!image)
+    return `<img class="${cls}" data-media="${h(src)}" src="images/brand/acs-symbol.png" alt="${h(alt)}" loading="lazy" decoding="async" width="600" height="600">`;
+  const srcset = image.variants
+    ? ` srcset="${[...new Map(image.variants.map((v) => [v.width, v])).values()].map((v) => `${h(v.src)} ${v.width}w`).join(', ')}" sizes="(max-width: 600px) 100vw, 600px"`
+    : '';
+  return `<img class="${cls}" src="${h(image.src)}"${srcset} alt="${h(alt)}" loading="lazy" decoding="async" width="${image.width || 600}" height="${image.height || 600}">`;
+}
+
+function pagination(items, selected, url, label) {
+  const index = items.indexOf(selected);
+  const previous =
+    index > 0 ? `<a rel="prev" href="${url(items[index - 1])}">← Previous</a>` : '<span aria-disabled="true">← Previous</span>';
+  const next =
+    index < items.length - 1 ? `<a rel="next" href="${url(items[index + 1])}">Next →</a>` : '<span aria-disabled="true">Next →</span>';
+  const links = items
+    .map(
+      (item) =>
+        `<a href="${url(item)}"${item === selected ? ' aria-current="page"' : ''}>${item === 'founders' ? 'Founding members' : item}</a>`,
+    )
+    .join('');
+  return `<nav class="year-pagination" aria-label="${label}">${previous}${links}${next}</nav>`;
+}
+
+export function eventYears(data, extra) {
+  return [...new Set([2024, 2025, 2026, ...(extra ? [extra] : []), ...data.events.map((e) => Number(e.date.slice(0, 4)))])].sort();
+}
+
+export function renderEvents(data, options = {}) {
+  const year = Number(/^20\d{2}$/.test(String(options.year)) ? options.year : latestYear(data));
+  const type = Object.hasOwn(categories, options.type) ? options.type : 'all';
+  const selected = data.events
+    .filter((e) => Number(e.date.slice(0, 4)) === year && (type === 'all' || e.category === type))
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const tabs = Object.entries(categories)
+    .map(([key, label]) => `<a href="${eventsHref(year, key)}"${key === type ? ' aria-current="page"' : ''}>${label}</a>`)
+    .join('');
+  const cards = selected
+    .map(
+      (e) =>
+        `<a class="event-card" href="${eventHref(e)}" data-event="${h(e.id)}">${photo(e.image, e.title)}<div class="event-card-overlay"><span class="event-kind">${categories[e.category]}</span><h2>${h(e.title)}</h2><time datetime="${e.date}">${eventDateLabel(e)}</time><span class="card-arrow" aria-hidden="true">↗</span></div></a>`,
+    )
+    .join('');
+  const results = selected.length
+    ? `<div class="event-grid">${cards}</div>`
+    : '<div class="empty-state"><h2>Events will be added soon</h2><p>No events have been published in this category for this year.</p><a href="activities.html">View all events →</a></div>';
+  return `<section class="archive" data-year="${year}" data-type="${type}"><div class="archive-heading"><h6>OUR WORKS AND ACTIVITIES</h6><h1 data-text="ACTIVITY">Our Events</h1></div><nav class="category-tabs" aria-label="Event categories">${tabs}</nav><div class="archive-meta"><h2>${year} <span>/ ${categories[type]}</span></h2><span>${selected.length} ${selected.length === 1 ? 'event' : 'events'}</span></div>${results}${pagination(eventYears(data, year), year, (y) => eventsHref(y, type), 'Event years')}</section>`;
+}
+
+export function renderEvent(data, id, { now = new Date(), inlineCalendar = false } = {}) {
+  const e = data.events.find((item) => item.id === id);
+  if (!e)
+    return '<section class="archive"><h1>Event not found</h1><p>This event has not been published, or its address has changed.</p><a href="activities.html">Back to events</a></section>';
+  const registration = eventPast(e, now)
+    ? '<p class="event-status">This event has ended. Registration is closed.</p>'
+    : eventOpen(e, now) && e.registrationUrl
+      ? `<a class="button" href="${h(e.registrationUrl)}" target="_blank" rel="noopener noreferrer">Register for this event ↗</a>`
+      : e.registrationStatus === 'closed'
+        ? '<p class="event-status">Registration is closed.</p>'
+        : '<p class="event-status">Registration details will be announced here.</p>';
+  const timed = e.startsAt && !validDate(e.startsAt);
+  const times = timed
+    ? `<dt>Time (Bangladesh)</dt><dd>${h(timeLabel(e.startsAt))} – ${h(timeLabel(e.endsAt))} (UTC+06:00)</dd>`
+    : '<dt>Time</dt><dd>All day. Calendar links save this as an all-day event.</dd>';
+  const ics = inlineCalendar
+    ? `<a class="button secondary" href="data:text/calendar;charset=utf-8,${h(encodeURIComponent(calendarICS(e)))}" download="${e.id}.ics">Download calendar (.ics)</a>`
+    : `<a class="button secondary" href="calendar/${e.id}.ics" download>Download calendar (.ics)</a>`;
+  const year = e.date.slice(0, 4);
+  return `<article class="event-detail"><a class="back-link" href="${eventsHref(year, e.category)}">← Back to ${categories[e.category].toLowerCase()} events</a><p class="eyebrow">${categories[e.category]} / ${eventDateLabel(e)}</p><h1>${h(e.title)}</h1><div class="detail-grid">${photo(e.image, e.title, 'detail-image')}<div><h2>About the event</h2><p>${h(e.description)}</p><dl><dt>Date</dt><dd><time datetime="${e.date}">${eventDateLabel(e)}</time></dd>${times}<dt>Location</dt><dd>${h(e.location || 'Location not published.')}</dd><dt>Organized by</dt><dd>ACS Student Chapter, GSTU</dd></dl>${registration}<div class="event-actions"><a class="button secondary" href="${h(googleCalendarURL(e))}" target="_blank" rel="noopener noreferrer">Google Calendar ↗</a>${ics}</div>${e.sourceUrl ? `<a href="${h(e.sourceUrl)}" target="_blank" rel="noopener noreferrer">View event coverage ↗</a>` : ''}</div></div></article>`;
+}
+
+function members(list, cls = '', showRoles = true) {
+  const cards = list
+    .map(
+      (m) =>
+        `<article class="member-card">${photo(m.image, m.name)}<div>${showRoles ? `<p>${h(m.role)}</p>` : ''}<h2>${h(m.name)}</h2></div></article>`,
+    )
+    .join('');
+  return `<div class="member-grid ${cls}">${cards}</div>`;
+}
+
+export function teamYears(data, extra) {
+  return ['founders', ...new Set([...Object.keys(data.team.committees), ...(extra && extra !== 'founders' ? [extra] : [])].sort())];
+}
+
+export function renderTeam(data, { year = 'founders' } = {}) {
+  const founding = year === 'founders';
+  const record = founding ? { members: data.team.founders, roster: [] } : data.team.committees[year] || { members: [], roster: [] };
+  const title = founding ? 'Founding Members' : `Executive Committee · ${year}`;
+  // The founding officers served as the 2024 committee.
+  const list =
+    !founding && String(year) === '2024' && !record.members.length
+      ? data.team.founders.filter((m) => !/advisor|consultant/i.test(m.role))
+      : record.members;
+  const grid = founding
+    ? members(
+        list.filter((m) => /advisor/i.test(m.role)),
+        'founder-advisors',
+      ) +
+      members(
+        list.filter((m) => /consultant/i.test(m.role)),
+        'founder-consultants',
+      ) +
+      members(
+        list.filter((m) => !/advisor|consultant/i.test(m.role)),
+        '',
+        false,
+      )
+    : members(list);
+  const tier = (key, label) => {
+    const names = record.roster.filter((m) => m.tier === key);
+    return `<h3>${label} members</h3>${names.length ? `<ul>${names.map((m) => `<li>${h(m.name)}</li>`).join('')}</ul>` : '<p>No confirmed members for this year yet. The chapter will add its annual roster here.</p>'}`;
+  };
+  const roster = founding
+    ? ''
+    : `<details class="roster"><summary>Show chapter roster · ${year}<span>General &amp; premium members</span></summary><div class="roster-body">${tier('general', 'General')}${tier('premium', 'Premium')}</div></details>`;
+  return `<section class="archive" data-year="${year}"><div class="archive-heading"><h6>OUR AMAZING FULLY SKILLED TEAM MEMBERS</h6><h1 data-text="Team">${title}</h1></div>${list.length ? grid : '<p class="empty-state">Committee details will be published here.</p>'}${roster}${pagination(teamYears(data, year), year, teamHref, 'Team archive years')}</section>`;
+}
+
+export function renderMembership(data) {
+  const m = data.membership;
+  const apply = m.applicationUrl || 'mailto:' + m.contactEmail;
+  const renew = m.renewalUrl || 'mailto:' + m.contactEmail + '?subject=Chapter%20membership%20renewal';
+  return `<div class="container"><div class="row"><div class="col-12"><h6>Join Us Now!</h6><h2 data-text="Let's Begin">Start your journey with us</h2></div><div class="col-md-5"><h4>Do you want to be a part of our community?</h4><div class="custom-link"><a href="${h(apply)}"><div class="lines"><span></span><span></span></div><b>JOIN NOW</b></a></div></div><div class="col-md-7"><p>${h(m.intro)}</p><details class="home-membership-details"><summary>Membership benefits &amp; renewal</summary><div><h3>Why join?</h3><ul>${m.benefits.map((v) => `<li>${h(v)}</li>`).join('')}</ul><h3>Who can join?</h3><p>${h(m.eligibility)}</p><h3>General membership</h3><p>${h(m.general)}</p><h3>Premium membership</h3><p>${h(m.premium)}</p><h3>Renew your membership</h3><p>${h(m.renewal)}</p><a class="button" href="${h(renew)}">${m.renewalUrl ? 'Renew membership ↗' : 'Ask about renewal'}</a></div></details></div></div></div>`;
+}
+
+/** The pill button on the homepage hero for the next event open for registration. */
+export function renderOpenEvent(data, now = new Date()) {
+  const open = data.events.filter((e) => eventOpen(e, now)).sort((a, b) => a.date.localeCompare(b.date));
+  if (!open.length) return '';
+  const e = open[0];
+  return `<a class="hero-registration" href="${eventHref(e)}" title="${h(e.title)}" aria-label="Explore ${h(e.title)} and register"><span>Explore new event &amp; register</span><span class="registration-arrow" aria-hidden="true">→</span></a>`;
+}

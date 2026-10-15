@@ -4,9 +4,23 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node --test tests/*.test.mjs",
-    "import-content": "node scripts/import-content.mjs",
-    "preview": "node scripts/serve.mjs"
+    "build:seed": "node scripts/build.mjs --seed",
+    "test": "node scripts/build.mjs --seed && node --test \"tests/unit/*.test.mjs\"",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-acs-rules \"node --test --test-force-exit tests/rules/rules.test.mjs\"",
+    "test:e2e": "firebase emulators:exec --only firestore,auth --project demo-acs-e2e \"playwright test\"",
+    "preview": "node scripts/serve.mjs",
+    "format": "prettier --write \"js/{admin,lib,public}/**/*.js\" \"scripts/*.mjs\" \"tests/**/*.mjs\""
   },
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "@playwright/test": "^1.64.1",
+    "esbuild": "^0.28.2",
+    "firebase": "^12.19.0",
+    "firebase-tools": "15.28.1",
+    "jsqr": "^1.4.0",
+    "prettier": "^3.3.3"
+  }
 }

@@ -1,151 +1,305 @@
 rules_version = '2';
+
+// ACS Student Chapter, GSTU — Firestore security rules.
+//
+// Layout (one document per area, so each area has its own small rule):
+//   site/meta                 public   revision counter used for freshness checks and rebuilds
+//   events/{eventId}          public   one event per document
+//   pages/homepage|membership public   homepage images, membership information
+//   team/founders|{year}      public   committee members and public roster (names and tiers only)
+//   rosterPrivate/{year}      private  membership IDs keyed by roster entry
+//   certificates/{id}         public   verification record (no membership ID)
+//   certificatePrivate/{id}   private  membership ID for a certificate
+//   certificateLookup/{hash}  public   SHA-256(eventId + membership ID) -> credential IDs
+//   certificateEvents/{id}    public   Certificate Center event list
+//   siteImages/{id}           public   uploaded, optimized JPEG images
+//   chapterEditors/{email}    private  editor grants managed by the super-admin
+//   auditLogs/{id}            private  append-only activity log (server timestamps)
+//   removals/{key}            private  tombstones that tie a deletion to its log entry
+//
+// Every write carries an auditId. The rules check that the referenced log entry is
+// created in the same request by the same person, with the same server timestamp.
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /certificateEvents/{eventId} {
-      allow get, list: if true;
-      allow create, update: if chapterEditor()
-        && request.resource.data.keys().hasOnly(['id','title','date','updatedAt','auditId'])
-        && request.resource.data.id == eventId
-        && eventId.matches('^[A-Za-z0-9_-]{1,100}$')
-        && request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 250
-        && request.resource.data.date is string && request.resource.data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
-        && request.resource.data.updatedAt == request.time && eventAudit(request.resource.data.auditId,eventId);
-      allow delete: if false;
+
+    // ---------------------------------------------------------------- identity
+
+    function signedInWithGoogle() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
     }
-    match /certificateLookup/{lookupId} {
-      allow get: if true;
-      allow list, delete: if false;
-      allow create, update: if chapterEditor()
-        && lookupId.matches('^[a-f0-9]{64}$')
-        && request.resource.data.keys().hasOnly(['eventId','ids','auditId'])
-        && request.resource.data.eventId is string && request.resource.data.eventId.size() <= 100
-        && request.resource.data.ids is list && request.resource.data.ids.size() > 0 && request.resource.data.ids.size() <= 20 && eventAudit(request.resource.data.auditId,request.resource.data.eventId);
+    function email() { return request.auth.token.email.lower(); }
+    function isOwner() { return email() == 'muhammadshamsularefin01@gmail.com'; }
+    function editorPath() { return /databases/$(database)/documents/chapterEditors/$(email()); }
+    function grantedRole() {
+      return exists(editorPath()) && get(editorPath()).data.active == true ? get(editorPath()).data.role : '';
     }
-    match /certificates/{certId} {
-      allow get: if true;
-      allow list: if false;
-      allow create: if chapterEditor() && validCertificate(certId) && issueAudit(request.resource.data.auditId, certId) && (superAdmin() || (editorRole() == 'administrator' && request.resource.data.type != 'executive') || request.resource.data.type == 'participant');
-      allow update: if (superAdmin()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','revokedAt','revokedBy','auditId'])
-        && request.resource.data.status == 'revoked'
-        && request.resource.data.revokedAt == request.time
-        && request.resource.data.revokedBy == request.auth.uid && auditMatches(request.resource.data.auditId,'certificate.revoke',certId));
-      allow delete: if false;
+    function role() { return !signedInWithGoogle() ? '' : isOwner() ? 'super-admin' : grantedRole(); }
+    function isSuperAdmin() { return role() == 'super-admin'; }
+    function isEditor() { return role() in ['super-admin', 'administrator', 'outreach']; }
+
+    // ---------------------------------------------------------------- audit
+
+    function logAt(id) { return getAfter(/databases/$(database)/documents/auditLogs/$(id)).data; }
+    function freshLog(id) {
+      return id is string && id.size() > 0 && id.size() <= 40
+        && logAt(id).actorUid == request.auth.uid && logAt(id).createdAt == request.time;
     }
-    function validCertificate(id) {
+    function audited(id, action, target) {
+      return freshLog(id) && logAt(id).action == action && logAt(id).target == target;
+    }
+    // Batch operations (certificates) list the affected IDs on one log entry.
+    function auditedBatch(id, actions, itemId) {
+      return freshLog(id) && logAt(id).action in actions && itemId in logAt(id).get('ids', []);
+    }
+    function stamped(action, target) {
       let d = request.resource.data;
-      return id.matches('^[A-Za-z0-9][A-Za-z0-9_-]{2,79}$')
-        && d.keys().hasOnly(['id','name','memID','designation','event','eventId','eventDate','dateIssued','type','status','achievement','templateVersion','certificate','createdAt','issuedBy','auditId'])
-        && d.id == id && d.name is string && d.name.size() > 0 && d.name.size() <= 160
-        && d.event is string && d.event.size() > 0 && d.event.size() <= 250
-        && d.memID is string && d.memID.size() <= 80
-        && d.designation is string && d.designation.size() <= 160
-        && d.eventId is string && d.eventId.size() <= 100
-        && d.eventDate is string && d.eventDate.size() <= 10
-        && d.dateIssued is string && d.dateIssued.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
-        && d.type in ['participant','champion','runner-up','second-runner-up','instructor','teacher','institution','organization','guest','delegate','executive','achievement']
-        && d.status == 'issued' && d.templateVersion == 1
-        && d.achievement is string && d.achievement.size() <= 220
-        && d.createdAt == request.time && d.issuedBy == request.auth.uid
-        && d.certificate == {'id':d.id,'name':d.name,'memID':d.memID,'designation':d.designation,'event':d.event,'eventId':d.eventId,'eventDate':d.eventDate,'dateIssued':d.dateIssued,'type':d.type,'status':d.status,'achievement':d.achievement,'templateVersion':d.templateVersion};
+      return d.updatedAt == request.time && d.updatedBy == request.auth.uid && audited(d.auditId, action, target);
     }
-    function verified() { return request.auth != null && request.auth.token.email_verified == true; }
-    function superAdmin() { return verified() && (request.auth.token.email.lower() == 'muhammadshamsularefin01@gmail.com' || editorRole() == 'super-admin'); }
-    function editorRole() {
-      let email = request.auth.token.email.lower();
-      return exists(/databases/$(database)/documents/chapterEditors/$(email)) && get(/databases/$(database)/documents/chapterEditors/$(email)).data.active == true ? get(/databases/$(database)/documents/chapterEditors/$(email)).data.role : '';
+    function nextRevision() {
+      let d = request.resource.data;
+      return d.revision is int && d.revision == (resource == null ? 1 : resource.data.get('revision', 0) + 1);
     }
-    function chapterEditor() { return verified() && (superAdmin() || editorRole() in ['super-admin','administrator','outreach']); }
-    function auditMatches(id,action,target) {
-      let log=getAfter(/databases/$(database)/documents/auditLogs/$(id)).data;
-      return log.actorUid == request.auth.uid && log.createdAt == request.time && log.action == action && log.target == target;
+    function removed(key, action, target) {
+      return audited(getAfter(/databases/$(database)/documents/removals/$(key)).data.auditId, action, target);
     }
-    function issueAudit(id,certId) {
-      let log=getAfter(/databases/$(database)/documents/auditLogs/$(id)).data;
-      return log.actorUid == request.auth.uid && log.createdAt == request.time && log.action == 'certificate.issue' && certId in log.ids;
+    function migrating() {
+      let d = request.resource.data;
+      return isSuperAdmin() && d.updatedAt == request.time && d.updatedBy == request.auth.uid
+        && audited(d.auditId, 'content.migrate', 'site');
     }
-    function eventAudit(id,eventId) {
-      let log=getAfter(/databases/$(database)/documents/auditLogs/$(id)).data;
-      return log.actorUid == request.auth.uid && log.createdAt == request.time && log.action == 'certificate.issue' && eventId in log.eventIds;
-    }
-    match /chapterEditors/{email} {
-      allow get: if verified() && (superAdmin() || request.auth.token.email.lower() == email);
-      allow list: if superAdmin();
-      allow create, update: if superAdmin() && email != 'muhammadshamsularefin01@gmail.com'
-        && request.resource.data.keys().hasOnly(['email','role','active','auditId','updatedAt','updatedBy'])
-        && request.resource.data.email == email && email.size() <= 200
-        && request.resource.data.role in ['super-admin','administrator','outreach'] && request.resource.data.active is bool
-        && request.resource.data.updatedBy == request.auth.uid && request.resource.data.updatedAt == request.time
-        && auditMatches(request.resource.data.auditId,'access.set',email);
-      allow delete: if superAdmin() && email != 'muhammadshamsularefin01@gmail.com' && auditMatches(getAfter(/databases/$(database)/documents/editorRemovals/$(email)).data.auditId,'access.delete',email);
-    }
+
     match /auditLogs/{id} {
-      allow read: if superAdmin();
-      allow create: if chapterEditor()
-        && request.resource.data.keys().hasOnly(['actorUid','actorEmail','action','target','detail','createdAt','revision','ids','eventIds'])
-        && request.resource.data.actorUid == request.auth.uid && request.resource.data.actorEmail == request.auth.token.email.lower()
-        && request.resource.data.createdAt == request.time && request.resource.data.detail is string && request.resource.data.detail.size() <= 1000
-        && ((request.resource.data.action in ['content.publish','content.update','event.add'] && getAfter(/databases/$(database)/documents/siteContent/published).data.auditId == id && getAfter(/databases/$(database)/documents/siteContent/published).data.revision == request.resource.data.revision)
-          || (request.resource.data.action == 'access.set' && superAdmin() && getAfter(/databases/$(database)/documents/chapterEditors/$(request.resource.data.target)).data.auditId == id)
-          || (request.resource.data.action == 'image.delete' && !existsAfter(/databases/$(database)/documents/siteImages/$(request.resource.data.target)) && getAfter(/databases/$(database)/documents/imageRemovals/$(request.resource.data.target)).data.auditId == id)
-          || (request.resource.data.action == 'image.add' && getAfter(/databases/$(database)/documents/siteImages/$(request.resource.data.target)).data.auditId == id)
-          || (request.resource.data.action == 'access.delete' && superAdmin() && !existsAfter(/databases/$(database)/documents/chapterEditors/$(request.resource.data.target)) && getAfter(/databases/$(database)/documents/editorRemovals/$(request.resource.data.target)).data.auditId == id)
-          || (request.resource.data.action == 'certificate.issue' && request.resource.data.ids is list && request.resource.data.ids.size() > 0 && request.resource.data.ids.size() <= 40 && getAfter(/databases/$(database)/documents/certificates/$(request.resource.data.target)).data.auditId == id)
-          || (request.resource.data.action == 'certificate.revoke' && superAdmin() && getAfter(/databases/$(database)/documents/certificates/$(request.resource.data.target)).data.auditId == id));
+      allow read: if isSuperAdmin();
+      allow create: if isEditor()
+        && request.resource.data.keys().hasOnly(['actorUid', 'actorEmail', 'action', 'target', 'detail', 'createdAt', 'ids'])
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.actorEmail == email()
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.action in ['content.migrate', 'event.create', 'event.update', 'event.delete', 'page.update',
+             'team.update', 'team.delete', 'image.add', 'image.delete', 'access.set', 'access.delete',
+             'certificate.issue', 'certificate.revoke', 'certificate.migrate', 'certificate.catalog']
+        && request.resource.data.target is string && request.resource.data.target.size() <= 200
+        && request.resource.data.detail is string && request.resource.data.detail.size() <= 1000
+        && request.resource.data.get('ids', []) is list && request.resource.data.get('ids', []).size() <= 200;
       allow update, delete: if false;
     }
-    function validEvent(e,id) {
-      return e.keys().hasOnly(['id','title','date','category','image','description','location','registrationUrl','registrationStatus','sourceUrl','startsAt','endsAt'])
+
+    match /removals/{key} {
+      allow read: if isSuperAdmin();
+      allow create, update: if isEditor() && request.resource.data.keys().hasOnly(['auditId']) && freshLog(request.resource.data.auditId);
+      allow delete: if false;
+    }
+
+    // ---------------------------------------------------------------- public site content
+
+    match /site/{doc} {
+      allow get: if doc == 'meta';
+      allow list: if false;
+      allow create, update: if doc == 'meta' && isEditor()
+        && request.resource.data.keys().hasOnly(['revision', 'updatedAt', 'updatedBy'])
+        && nextRevision() && request.resource.data.updatedAt == request.time && request.resource.data.updatedBy == request.auth.uid;
+      allow delete: if false;
+    }
+
+    function shortText(v, max) { return v is string && v.size() <= max; }
+    function eventFields(e, id) {
+      return e.keys().hasOnly(['id', 'title', 'date', 'category', 'image', 'description', 'location', 'registrationUrl',
+             'registrationStatus', 'sourceUrl', 'startsAt', 'endsAt', 'createdBy', 'revision', 'updatedAt', 'updatedBy', 'auditId'])
         && e.id == id && id.matches('^[a-z0-9]+(-[a-z0-9]+)*$') && id.size() <= 80
         && e.title is string && e.title.size() > 0 && e.title.size() <= 200
         && e.date is string && e.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
-        && e.category in ['outreach','development','sustainability','community']
+        && e.category in ['outreach', 'development', 'sustainability', 'community']
         && e.description is string && e.description.size() > 0 && e.description.size() <= 5000
-        && e.image is string && e.image.size() <= 2000 && e.location is string && e.location.size() <= 300
-        && e.registrationStatus in ['unpublished','open','closed'] && e.registrationUrl is string && e.registrationUrl.size() <= 2000
-        && e.sourceUrl is string && e.sourceUrl.size() <= 2000 && e.startsAt is string && e.startsAt.size() <= 35 && e.endsAt is string && e.endsAt.size() <= 35;
+        && shortText(e.image, 2000) && shortText(e.location, 300)
+        && e.registrationStatus in ['unpublished', 'open', 'closed'] && shortText(e.registrationUrl, 2000)
+        && shortText(e.sourceUrl, 2000) && shortText(e.startsAt, 35) && shortText(e.endsAt, 35)
+        && e.createdBy is string;
     }
-    match /siteContent/{document} {
-      allow get: if document == 'published';
-      allow list, delete: if false;
-      allow create, update: if document == 'published' && chapterEditor()
-        && request.resource.data.keys().hasOnly(['payload','events','homepage','membership','schemaVersion','revision','updatedAt','updatedBy','eventId','auditId'])
-        && request.resource.data.payload is string && request.resource.data.payload.size() < 600000
-        && request.resource.data.schemaVersion == 2 && request.resource.data.events is map && request.resource.data.events.size() <= 300
-        && request.resource.data.revision is int
-        && ((!exists(/databases/$(database)/documents/siteContent/published) && request.resource.data.revision == 1)
-          || (exists(/databases/$(database)/documents/siteContent/published) && request.resource.data.revision == resource.data.revision + 1))
-        && request.resource.data.updatedAt == request.time && request.resource.data.updatedBy == request.auth.uid
-        && ((superAdmin() && auditMatches(request.resource.data.auditId,'content.publish','published'))
-          || (resource.data.schemaVersion == 2 && request.resource.data.payload == resource.data.payload
-            && request.resource.data.get('homepage',{}) == resource.data.get('homepage',{}) && request.resource.data.get('membership',{}) == resource.data.get('membership',{})
-            && !(request.resource.data.eventId in resource.data.events)
-            && request.resource.data.events.diff(resource.data.events).affectedKeys().hasOnly([request.resource.data.eventId])
-            && validEvent(request.resource.data.events[request.resource.data.eventId],request.resource.data.eventId)
-            && auditMatches(request.resource.data.auditId,'event.add',request.resource.data.eventId))
-          || (request.resource.data.eventId in ['homepage','membership'] && request.resource.data.diff(resource.data).affectedKeys().hasOnly([request.resource.data.eventId,'revision','eventId','auditId','updatedAt','updatedBy']) && auditMatches(request.resource.data.auditId,'content.update',request.resource.data.eventId)));
+
+    match /events/{eventId} {
+      allow get, list: if true;
+      allow create: if isEditor() && eventFields(request.resource.data, eventId) && request.resource.data.revision == 1
+        && (migrating() || (request.resource.data.createdBy == request.auth.uid && stamped('event.create', eventId)));
+      // Super-admins and chapter administrators edit any event; outreach editors edit the events they created.
+      allow update: if (role() in ['super-admin', 'administrator'] || (isEditor() && resource.data.createdBy == request.auth.uid))
+        && eventFields(request.resource.data, eventId) && request.resource.data.createdBy == resource.data.createdBy
+        && nextRevision() && stamped('event.update', eventId);
+      allow delete: if isSuperAdmin() && removed('events:' + eventId, 'event.delete', eventId);
     }
-    match /siteImages/{id} {
-      allow get: if true;
-      allow list: if chapterEditor();
-      allow create: if chapterEditor() && id.matches('^[a-f0-9-]{36}$') && request.resource.data.keys().hasOnly(['image','name','createdBy','createdAt','auditId']) && request.resource.data.image is string && request.resource.data.image.size() <= 280000 && request.resource.data.image.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$') && request.resource.data.name is string && request.resource.data.name.size() <= 150 && request.resource.data.createdBy == request.auth.uid && request.resource.data.createdAt == request.time && auditMatches(request.resource.data.auditId,'image.add',id);
-      allow update: if false;
-      allow delete: if chapterEditor() && (superAdmin() || resource.data.createdBy == request.auth.uid) && auditMatches(getAfter(/databases/$(database)/documents/imageRemovals/$(id)).data.auditId,'image.delete',id);
+
+    function pageMeta() { return ['revision', 'updatedAt', 'updatedBy', 'auditId']; }
+    function homepageFields(d) {
+      return d.keys().hasOnly(['images'].concat(pageMeta())) && d.images is list && d.images.size() <= 5;
     }
-    match /imageRemovals/{id} {
-      allow create, update: if chapterEditor() && request.resource.data.keys().hasOnly(['auditId']) && auditMatches(request.resource.data.auditId,'image.delete',id) && !existsAfter(/databases/$(database)/documents/siteImages/$(id));
-      allow read, delete: if false;
+    function membershipFields(d) {
+      return d.keys().hasOnly(['intro', 'eligibility', 'general', 'premium', 'renewal', 'benefits', 'applicationUrl',
+             'renewalUrl', 'contactEmail'].concat(pageMeta()))
+        && shortText(d.intro, 5000) && shortText(d.eligibility, 5000) && shortText(d.general, 5000)
+        && shortText(d.premium, 5000) && shortText(d.renewal, 5000)
+        && d.benefits is list && d.benefits.size() <= 30
+        && shortText(d.applicationUrl, 2000) && shortText(d.renewalUrl, 2000) && shortText(d.contactEmail, 200);
     }
-    match /editorRemovals/{email} {
-      allow read: if superAdmin();
-      allow create, update: if superAdmin() && request.resource.data.keys().hasOnly(['auditId']) && auditMatches(request.resource.data.auditId,'access.delete',email) && !existsAfter(/databases/$(database)/documents/chapterEditors/$(email));
+
+    match /pages/{page} {
+      allow get: if page in ['homepage', 'membership'];
+      allow list: if false;
+      allow create, update: if isEditor() && nextRevision()
+        && (page == 'homepage' ? homepageFields(request.resource.data) : page == 'membership' && membershipFields(request.resource.data))
+        && (migrating() || stamped('page.update', page));
       allow delete: if false;
     }
-    match /privateRosters/{id} {
-      allow get: if superAdmin();
-      allow create, update: if superAdmin() && id == 'members' && request.resource.data.keys().hasOnly(['years','auditId','updatedAt']) && request.resource.data.years is map && request.resource.data.updatedAt == request.time && auditMatches(request.resource.data.auditId,'content.publish','published') && getAfter(/databases/$(database)/documents/siteContent/published).data.auditId == request.resource.data.auditId;
-      allow list, delete: if false;
+
+    function teamYear(year) { return year == 'founders' || year.matches('^20[0-9]{2}$'); }
+
+    // Public team records: committee members (name, role, photo) and roster names/tiers. No membership IDs.
+    match /team/{year} {
+      allow get, list: if true;
+      allow create, update: if isSuperAdmin() && teamYear(year) && nextRevision()
+        && request.resource.data.keys().hasOnly(['members', 'roster'].concat(pageMeta()))
+        && request.resource.data.members is list && request.resource.data.members.size() <= 200
+        && request.resource.data.get('roster', []) is list && request.resource.data.get('roster', []).size() <= 3000
+        && (year != 'founders' || request.resource.data.get('roster', []).size() == 0)
+        && (migrating() || stamped('team.update', year));
+      allow delete: if isSuperAdmin() && year != 'founders' && removed('team:' + year, 'team.delete', year);
     }
+
+    // Private membership IDs for a roster year, keyed by the public roster entry key.
+    match /rosterPrivate/{year} {
+      allow get, list: if isSuperAdmin();
+      allow create, update: if isSuperAdmin() && year.matches('^20[0-9]{2}$') && nextRevision()
+        && request.resource.data.keys().hasOnly(['ids'].concat(pageMeta())) && request.resource.data.ids is map
+        && request.resource.data.ids.size() <= 3000
+        && (migrating() || stamped('team.update', year));
+      allow delete: if isSuperAdmin() && removed('rosterPrivate:' + year, 'team.delete', year);
+    }
+
+    match /siteImages/{id} {
+      allow get: if true;
+      allow list: if isEditor();
+      allow create: if isEditor() && id.matches('^[a-f0-9-]{36}$')
+        && request.resource.data.keys().hasOnly(['image', 'name', 'createdBy', 'createdAt', 'auditId'])
+        && request.resource.data.image is string && request.resource.data.image.size() <= 280000
+        && request.resource.data.image.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$')
+        && shortText(request.resource.data.name, 150)
+        && request.resource.data.createdBy == request.auth.uid && request.resource.data.createdAt == request.time
+        && audited(request.resource.data.auditId, 'image.add', id);
+      allow update: if false;
+      allow delete: if isEditor() && (isSuperAdmin() || resource.data.createdBy == request.auth.uid)
+        && removed('siteImages:' + id, 'image.delete', id);
+    }
+
+    // ---------------------------------------------------------------- editors
+
+    match /chapterEditors/{editor} {
+      allow get: if signedInWithGoogle() && (isSuperAdmin() || email() == editor);
+      allow list: if isSuperAdmin();
+      allow create, update: if isSuperAdmin() && editor != 'muhammadshamsularefin01@gmail.com'
+        && request.resource.data.keys().hasOnly(['email', 'role', 'active', 'auditId', 'updatedAt', 'updatedBy'])
+        && request.resource.data.email == editor && editor.size() <= 200
+        && request.resource.data.role in ['super-admin', 'administrator', 'outreach'] && request.resource.data.active is bool
+        && stamped('access.set', editor);
+      allow delete: if isSuperAdmin() && editor != 'muhammadshamsularefin01@gmail.com'
+        && removed('chapterEditors:' + editor, 'access.delete', editor);
+    }
+
+    // ---------------------------------------------------------------- certificates
+
+    function mayIssue(type) {
+      return isSuperAdmin() || (role() == 'administrator' && type != 'executive') || type == 'participant';
+    }
+    function certificateFields(id) {
+      let d = request.resource.data;
+      return id.matches('^[A-Za-z0-9][A-Za-z0-9_-]{2,79}$')
+        && d.keys().hasOnly(['id', 'name', 'designation', 'event', 'eventId', 'eventDate', 'dateIssued', 'type', 'status',
+             'achievement', 'templateVersion', 'createdAt', 'issuedBy', 'auditId'])
+        && d.id == id && d.name is string && d.name.size() > 0 && d.name.size() <= 160
+        && d.event is string && d.event.size() > 0 && d.event.size() <= 250
+        && shortText(d.designation, 160) && shortText(d.eventId, 100) && shortText(d.eventDate, 10)
+        && d.dateIssued is string && d.dateIssued.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && d.type in ['participant', 'champion', 'runner-up', 'second-runner-up', 'instructor', 'teacher', 'institution',
+             'organization', 'guest', 'delegate', 'executive', 'achievement']
+        && d.status == 'issued' && d.templateVersion == 1 && shortText(d.achievement, 220)
+        && d.createdAt == request.time && d.issuedBy == request.auth.uid;
+    }
+
+    match /certificates/{certId} {
+      // Records created before the split may still hold a membership ID; those stay private until migrated.
+      allow get: if resource.data.get('memID', '') == '' || isEditor();
+      allow list: if isSuperAdmin();
+      allow create: if isEditor() && certificateFields(certId) && mayIssue(request.resource.data.type)
+        && auditedBatch(request.resource.data.auditId, ['certificate.issue'], certId);
+      allow update: if isSuperAdmin() && (
+          // Revoke: status changes only, never reissued.
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'revokedAt', 'revokedBy', 'auditId'])
+            && request.resource.data.status == 'revoked' && resource.data.get('status', 'issued') != 'revoked'
+            && request.resource.data.revokedAt == request.time && request.resource.data.revokedBy == request.auth.uid
+            && audited(request.resource.data.auditId, 'certificate.revoke', certId))
+          // Migrate: move the membership ID out of the public record.
+          || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memID', 'certificate', 'auditId', 'migratedAt'])
+            && !('memID' in request.resource.data) && !('certificate' in request.resource.data)
+            && request.resource.data.migratedAt == request.time
+            && auditedBatch(request.resource.data.auditId, ['certificate.migrate'], certId)));
+      allow delete: if false;
+    }
+
+    match /certificatePrivate/{certId} {
+      allow get: if isEditor();
+      allow list: if isSuperAdmin();
+      allow create: if isEditor() && request.resource.data.keys().hasOnly(['memID', 'auditId'])
+        && request.resource.data.memID is string && request.resource.data.memID.size() > 0 && request.resource.data.memID.size() <= 80
+        && auditedBatch(request.resource.data.auditId, ['certificate.issue', 'certificate.migrate'], certId);
+      allow update, delete: if false;
+    }
+
+    match /certificateLookup/{lookupId} {
+      allow get: if true;
+      allow list, delete: if false;
+      allow create, update: if isEditor() && lookupId.matches('^[a-f0-9]{64}$')
+        && request.resource.data.keys().hasOnly(['eventId', 'ids', 'auditId'])
+        && shortText(request.resource.data.eventId, 100)
+        && request.resource.data.ids is list && request.resource.data.ids.size() > 0 && request.resource.data.ids.size() <= 20
+        && freshLog(request.resource.data.auditId)
+        && logAt(request.resource.data.auditId).action in ['certificate.issue', 'certificate.migrate'];
+    }
+
+    match /certificateEvents/{eventId} {
+      allow get, list: if true;
+      allow create, update: if isEditor() && eventId.matches('^[A-Za-z0-9_-]{1,100}$')
+        && request.resource.data.keys().hasOnly(['id', 'title', 'date', 'archived', 'updatedAt', 'auditId'])
+        && request.resource.data.id == eventId
+        && request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 250
+        && request.resource.data.date is string && request.resource.data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.get('archived', false) is bool
+        && request.resource.data.updatedAt == request.time && freshLog(request.resource.data.auditId)
+        && (
+          // Issuing keeps the archive flag; only the super-admin hides or restores a list entry.
+          (logAt(request.resource.data.auditId).action == 'certificate.issue'
+            && request.resource.data.get('archived', false) == (resource == null ? false : resource.data.get('archived', false)))
+          || (isSuperAdmin() && logAt(request.resource.data.auditId).action in ['certificate.catalog', 'content.migrate']));
+      allow delete: if false;
+    }
+
+    // ---------------------------------------------------------------- retired layout (read-only)
+
+    // The single-document layout used before the split. Kept readable for migration and old links.
+    match /siteContent/{doc} {
+      allow get: if doc == 'published';
+      allow list, write: if false;
+    }
+    match /privateRosters/{doc} {
+      allow get: if isSuperAdmin();
+      allow list, write: if false;
+    }
+    match /editorRemovals/{doc} {
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
+    match /imageRemovals/{doc} {
+      allow read, write: if false;
+    }
+
     match /{document=**} { allow read, write: if false; }
   }
 }
