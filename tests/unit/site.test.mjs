@@ -94,3 +94,12 @@ test('security headers and cache rules are configured', () => {
   assert.ok(!('predeploy' in hosting), 'the workflow builds once; firebase deploy does not rebuild');
   assert.ok(fs.readdirSync('public/js').some((f) => /^site\.[A-Z0-9]+\.js$/.test(f)));
 });
+
+test('search engines get a sitemap and robots.txt; pages have share images', () => {
+  const sitemap = read('public/sitemap.xml');
+  assert.ok(sitemap.includes('<loc>https://acs-gstu.web.app/</loc>'));
+  assert.ok(!sitemap.includes('admin.html'));
+  assert.ok(read('public/robots.txt').includes('Disallow: /admin.html'));
+  for (const file of pages.filter((f) => f !== 'admin.html'))
+    assert.match(read(`public/${file}`), /<meta property="og:image" content="https:\/\//, file);
+});

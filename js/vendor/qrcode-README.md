@@ -10,9 +10,11 @@ QR Code Generator
 ```html
 <script type="text/javascript" src="qrcode.js"></script>
 ```
+
 ```html
 <div id="placeHolder"></div>
 ```
+
 ```javascript
 var typeNumber = 4;
 var errorCorrectionLevel = 'L';
@@ -21,45 +23,52 @@ qr.addData('Hi!');
 qr.make();
 document.getElementById('placeHolder').innerHTML = qr.createImgTag();
 ```
+
 ## API Documentation
 
 ### QRCodeFactory
 
 #### qrcode(typeNumber, errorCorrectionLevel) => <code>QRCode</code>
+
 Create a QRCode Object.
 
 | Param                | Type                | Description                                    |
-| ---------------------| ------------------- | ---------------------------------------------- |
+| -------------------- | ------------------- | ---------------------------------------------- |
 | typeNumber           | <code>number</code> | Type number (1 ~ 40), or 0 for auto detection. |
 | errorCorrectionLevel | <code>string</code> | Error correction level ('L', 'M', 'Q', 'H')    |
 
 #### qrcode.stringToBytes(s) : <code>number[]</code>
+
 Encodes a string into an array of number(byte) using any charset.
 This function is used by internal.
 Overwrite this function to encode using a multibyte charset.
 
-| Param  | Type                | Description      |
-| ------ | ------------------- | ---------------- |
-| s      | <code>string</code> | string to encode |
+| Param | Type                | Description      |
+| ----- | ------------------- | ---------------- |
+| s     | <code>string</code> | string to encode |
 
 ### QRCode
 
 #### addData(data, mode) => <code>void</code>
+
 Add a data to encode.
 
-| Param  | Type                | Description                                                |
-| ------ | ------------------- | ---------------------------------------------------------- |
-| data   | <code>string</code> | string to encode                                           |
-| mode   | <code>string</code> | Mode ('Numeric', 'Alphanumeric', 'Byte'(default), 'Kanji') |
+| Param | Type                | Description                                                |
+| ----- | ------------------- | ---------------------------------------------------------- |
+| data  | <code>string</code> | string to encode                                           |
+| mode  | <code>string</code> | Mode ('Numeric', 'Alphanumeric', 'Byte'(default), 'Kanji') |
 
 #### make() => <code>void</code>
+
 Make a QR Code.
 
 #### getModuleCount() => <code>number</code>
+
 The number of modules(cells) for each orientation.
 _[Note] call make() before this function._
 
 #### isDark(row, col) => <code>boolean</code>
+
 The module at row and col is dark or not.
 _[Note] call make() before this function._
 
@@ -69,12 +78,17 @@ _[Note] call make() before this function._
 | col   | <code>number</code> | 0 ~ moduleCount - 1 |
 
 #### createDataURL(cellSize, margin) => <code>string</code>
+
 #### createImgTag(cellSize, margin, alt) => <code>string</code>
+
 #### createSvgTag(cellSize, margin) => <code>string</code>
+
 #### createTableTag(cellSize, margin) => <code>string</code>
+
 #### createASCII(cellSize, margin) => <code>string</code>
+
 Helper functions for HTML.
- _[Note] call make() before these functions._
+_[Note] call make() before these functions._
 
 | Param    | Type                | Description           |
 | -------- | ------------------- | --------------------- |

@@ -49,11 +49,18 @@ async function swap(root, html) {
     }),
   );
   const open = [...root.querySelectorAll('details[open] summary')].map((el) => el.textContent);
-  root.style.minHeight = `${root.getBoundingClientRect().height}px`;
   root.replaceChildren(template.content);
   for (const detail of root.querySelectorAll('details'))
     if (open.includes(detail.querySelector('summary')?.textContent)) detail.open = true;
-  requestAnimationFrame(() => (root.style.minHeight = ''));
+}
+
+const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** After a year or page change, bring the new list into view from its start (never a random spot). */
+function revealTop(root) {
+  const target = root.querySelector('.archive-meta, .archive-heading') || root;
+  if (target.getBoundingClientRect().top >= 80 && target.getBoundingClientRect().top < innerHeight / 2) return;
+  target.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
 }
 
 export function setupLiveContent() {
@@ -108,6 +115,7 @@ export function setupLiveContent() {
   for (const root of roots.filter((r) => ['events', 'team'].includes(r.dataset.view))) {
     root.addEventListener('click', async (event) => {
       const link = event.target.closest('.category-tabs a, .year-pagination a, .empty-state a');
+      const moves = !!link?.closest('.year-pagination, .empty-state');
       if (!link || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
       const url = new URL(link.href);
@@ -115,6 +123,9 @@ export function setupLiveContent() {
         history.pushState(null, '', url);
         await renderReady();
         await paint(root, data || (await bakedContent()), url, { quiet: true });
+        if (moves) revealTop(root);
+        // Keep keyboard focus on the same control after the content is replaced.
+        root.querySelector(`a[href="${link.getAttribute('href')}"]`)?.focus({ preventScroll: true });
       } catch {
         location.assign(url.href);
       }

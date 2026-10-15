@@ -130,3 +130,12 @@
 
 /* Inner pages: one doodle layer (on <main>). The theme's own section patterns would stack a second copy. */
 .inner-page main .news,.inner-page main .hello,.inner-page main .clients,.inner-page main .intro{background:transparent}
+
+/* Year and page changes scroll to the list start below the fixed navigation bar. */
+#editable-content .archive-heading,#editable-content .archive-meta{scroll-margin-top:96px}
+
+/* Event posters are shown whole (they carry text), centred on the ACS blue. */
+.event-card{background:#14205a}.event-card>img{object-fit:contain}
+/* Phones: the year bar stays on one line; Previous/Next become arrows (words remain for screen readers). */
+@media(max-width:600px){.year-pagination{flex-wrap:nowrap;overflow-x:auto;justify-content:safe center;scrollbar-width:none}.year-pagination a,.year-pagination>span{flex:none;white-space:nowrap}.year-pagination .pager-word{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}
+#catalog-status:not(:empty){margin-top:14px}

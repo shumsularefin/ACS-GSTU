@@ -60,9 +60,13 @@ export function photo(src, alt, cls = '') {
 function pagination(items, selected, url, label) {
   const index = items.indexOf(selected);
   const previous =
-    index > 0 ? `<a rel="prev" href="${url(items[index - 1])}">← Previous</a>` : '<span aria-disabled="true">← Previous</span>';
+    index > 0
+      ? `<a rel="prev" href="${url(items[index - 1])}">← <span class="pager-word">Previous</span></a>`
+      : '<span aria-disabled="true">← <span class="pager-word">Previous</span></span>';
   const next =
-    index < items.length - 1 ? `<a rel="next" href="${url(items[index + 1])}">Next →</a>` : '<span aria-disabled="true">Next →</span>';
+    index < items.length - 1
+      ? `<a rel="next" href="${url(items[index + 1])}"><span class="pager-word">Next</span> →</a>`
+      : '<span aria-disabled="true"><span class="pager-word">Next</span> →</span>';
   const links = items
     .map(
       (item) =>

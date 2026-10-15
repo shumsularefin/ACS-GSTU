@@ -156,7 +156,18 @@ function firstHeroImage() {
  * view: the live-content view this page renders ('events', 'event', 'team', 'membership') so that
  * js/public/site.js can refresh it after a publish, before the next scheduled rebuild.
  */
-function page(filename, { title, description, body, active, view, attrs = {}, admin = false }) {
+const SITE = 'https://acs-gstu.web.app/';
+const DEFAULT_SHARE_IMAGE = 'images/optimized/slide01-1600.webp';
+/** Absolute share-image URL for link previews (uploaded or bundled images only). */
+function shareImage(src) {
+  if (!src) return SITE + DEFAULT_SHARE_IMAGE;
+  if (src.startsWith('media:')) return media[src] ? SITE + media[src] : SITE + DEFAULT_SHARE_IMAGE;
+  if (/^https:/.test(src)) return src;
+  const v = images[src];
+  return SITE + (v ? v[v.length - 1].src : src);
+}
+
+function page(filename, { title, description, body, active, view, attrs = {}, admin = false, image = '' }) {
   const navigation = navItems
     .map(([id, label]) => `<li><a href="${id}.html"${id === active ? ' aria-current="page"' : ''}>${label}</a></li>`)
     .join('');
@@ -182,6 +193,9 @@ function page(filename, { title, description, body, active, view, attrs = {}, ad
     `<meta property="og:description" content="${h(description)}">`,
     `<meta property="og:url" content="${canonical}">`,
     '<meta property="og:site_name" content="ACS Student Chapter, GSTU">',
+    `<meta property="og:type" content="${view === 'event' ? 'article' : 'website'}">`,
+    `<meta property="og:image" content="${h(shareImage(image))}">`,
+    '<meta name="twitter:card" content="summary_large_image">',
     admin || filename === '404.html' ? '<meta name="robots" content="noindex,nofollow">' : '',
     '<link rel="icon" href="ico/favicon.png">',
     '<link rel="stylesheet" href="css/bootstrap.min.css">',
@@ -253,6 +267,7 @@ for (const e of data.events) {
     active: 'activities',
     view: 'event',
     attrs: { event: e.id },
+    image: e.image,
     body: renderEvent(data, e.id),
   });
   write(`calendar/${e.id}.ics`, calendarICS(e));
@@ -296,6 +311,29 @@ const siteConfig = process.env.FIRESTORE_ORIGIN
 write('data/site-config.json', JSON.stringify(siteConfig, null, 2));
 fs.copyFileSync('data/image-manifest.json', path.join(publicRoot, 'data/image-manifest.json'));
 write('data/content.json', JSON.stringify(data));
+// Search engines: every public page, never the dashboard.
+const listed = pages.filter((f) => !['admin.html', '404.html', 'event.html', 'verify.html'].includes(f));
+const years = [...new Set(data.events.map((e) => e.date.slice(0, 4)))];
+const urls = [
+  ...listed.map((f) => SITE + (f === 'index.html' ? '' : f)),
+  ...years.map((y) => `${SITE}activities.html?year=${y}&amp;type=all`),
+  ...Object.keys(data.team.committees).map((y) => `${SITE}team.html?year=${y}`),
+];
+write(
+  'sitemap.xml',
+  `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.map((u) => `  <url><loc>${u}</loc></url>`).join('\n')}
+</urlset>
+`,
+);
+write(
+  'robots.txt',
+  `User-agent: *
+Disallow: /admin.html
+Sitemap: ${SITE}sitemap.xml
+`,
+);
 // Until the storage upgrade, Certificate Center entries hidden in the retired layout stay hidden.
 const build = {
   revision,
