@@ -194,3 +194,24 @@ test('linked website forms drive the register, feedback and join buttons', async
   assert.ok(pills.includes('Explore new event') && pills.includes('Member registration is open'));
   assert.ok(!renderOpenEvent({ events: [], membership, forms: [{ ...forms[2], status: 'closed' }] }, now).includes('Member registration'));
 });
+
+test('without an open form, membership registration and renewal say they are closed; names link to the profile', async () => {
+  const { normalizeMembership } = await import('../../js/lib/content-model.js');
+  const { renderMembership, renderTeam } = await import('../../js/lib/content-render.js');
+  const membership = normalizeMembership({
+    intro: 'Join',
+    eligibility: 'Students',
+    general: 'General',
+    premium: 'Premium',
+    renewal: 'Renew',
+    benefits: ['Friends'],
+    applicationUrl: 'https://forms.gle/old',
+    contactEmail: 'chapter@example.com',
+  });
+  const html = renderMembership({ membership, forms: [] });
+  assert.ok(html.includes('Membership registration for this year is closed now.'));
+  assert.ok(html.includes('Membership renewal is closed now.'));
+  assert.ok(!html.includes('forms.gle') && !html.includes('Join now'));
+  const team = renderTeam({ team: { founders: [{ name: 'Shumsul Arefin', role: 'Founder', image: '' }], committees: {} }, events: [] });
+  assert.ok(team.includes('<a class="name-link" href="https://shumsul-arefin.web.app"'));
+});

@@ -17,6 +17,14 @@ import { bdLabel } from './form-model.js';
 export const formHref = (id) => `form.html?id=${encodeURIComponent(id)}`;
 const formLinkAttrs = (id) => `href="${formHref(id)}" data-form="${h(id)}"`;
 
+/** Links every mention of Shumsul Arefin (in already escaped text) to his website. */
+export const PROFILE_URL = 'https://shumsul-arefin.web.app';
+export const linkNames = (html) =>
+  String(html).replace(
+    /Shumsul Arefin/gi,
+    (name) => `<a class="name-link" href="${PROFILE_URL}" target="_blank" rel="noopener">${name}</a>`,
+  );
+
 let imageManifest = {};
 let bakedMedia = {};
 let bakedEvents = null;
@@ -151,14 +159,14 @@ export function renderEvent(data, id, { now = new Date(), inlineCalendar = false
     ? `<a class="button secondary" href="data:text/calendar;charset=utf-8,${h(encodeURIComponent(calendarICS(e)))}" download="${e.id}.ics">Download calendar (.ics)</a>`
     : `<a class="button secondary" href="calendar/${e.id}.ics" download>Download calendar (.ics)</a>`;
   const year = e.date.slice(0, 4);
-  return `<article class="event-detail"><a class="back-link" href="${eventsHref(year, e.category)}">← Back to ${categories[e.category].toLowerCase()} events</a><p class="eyebrow">${categories[e.category]} / ${eventDateLabel(e)}</p><h1>${h(e.title)}</h1><div class="detail-grid">${photo(e.image, e.title, 'detail-image')}<div><h2>About the event</h2><p>${h(e.description)}</p><dl><dt>Date</dt><dd><time datetime="${e.date}">${eventDateLabel(e)}</time></dd>${times}<dt>Location</dt><dd>${h(e.location || 'Location not published.')}</dd><dt>Organized by</dt><dd>ACS Student Chapter, GSTU</dd></dl>${registration}<div class="event-actions">${survey}<a class="button secondary" href="${h(googleCalendarURL(e))}" target="_blank" rel="noopener noreferrer">Google Calendar ↗</a>${ics}</div>${e.sourceUrl ? `<a href="${h(e.sourceUrl)}" target="_blank" rel="noopener noreferrer">View event coverage ↗</a>` : ''}</div></div></article>`;
+  return `<article class="event-detail"><a class="back-link" href="${eventsHref(year, e.category)}">← Back to ${categories[e.category].toLowerCase()} events</a><p class="eyebrow">${categories[e.category]} / ${eventDateLabel(e)}</p><h1>${h(e.title)}</h1><div class="detail-grid">${photo(e.image, e.title, 'detail-image')}<div><h2>About the event</h2><p>${linkNames(h(e.description))}</p><dl><dt>Date</dt><dd><time datetime="${e.date}">${eventDateLabel(e)}</time></dd>${times}<dt>Location</dt><dd>${h(e.location || 'Location not published.')}</dd><dt>Organized by</dt><dd>ACS Student Chapter, GSTU</dd></dl>${registration}<div class="event-actions">${survey}<a class="button secondary" href="${h(googleCalendarURL(e))}" target="_blank" rel="noopener noreferrer">Google Calendar ↗</a>${ics}</div>${e.sourceUrl ? `<a href="${h(e.sourceUrl)}" target="_blank" rel="noopener noreferrer">View event coverage ↗</a>` : ''}</div></div></article>`;
 }
 
 function members(list, cls = '', showRoles = true) {
   const cards = list
     .map(
       (m) =>
-        `<article class="member-card">${photo(m.image, m.name)}<div>${showRoles ? `<p>${h(m.role)}</p>` : ''}<h2>${h(m.name)}</h2></div></article>`,
+        `<article class="member-card">${photo(m.image, m.name)}<div>${showRoles ? `<p>${h(m.role)}</p>` : ''}<h2>${linkNames(h(m.name))}</h2></div></article>`,
     )
     .join('');
   return `<div class="member-grid ${cls}">${cards}</div>`;
@@ -194,7 +202,7 @@ export function renderTeam(data, { year = 'founders' } = {}) {
     : members(list);
   const tier = (key, label) => {
     const names = record.roster.filter((m) => m.tier === key);
-    return `<h3>${label} members</h3>${names.length ? `<ul>${names.map((m) => `<li>${h(m.name)}</li>`).join('')}</ul>` : '<p>No confirmed members for this year yet. The chapter will add its annual roster here.</p>'}`;
+    return `<h3>${label} members</h3>${names.length ? `<ul>${names.map((m) => `<li>${linkNames(h(m.name))}</li>`).join('')}</ul>` : '<p>No confirmed members for this year yet. The chapter will add its annual roster here.</p>'}`;
   };
   const roster = founding
     ? ''
@@ -205,24 +213,23 @@ export function renderTeam(data, { year = 'founders' } = {}) {
 export function renderMembership(data, now = new Date()) {
   const m = data.membership;
   const forms = data.forms || [];
-  // A linked website form wins over an outside link; without either, the buttons open an email.
-  const target = (formId, url, mail) =>
-    linkedFormState(forms, formId, now) !== 'none' ? formLinkAttrs(formId) : `href="${h(url || mail)}"`;
-  const apply = target(m.applicationFormId, m.applicationUrl, 'mailto:' + m.contactEmail);
-  const renewing = linkedFormState(forms, m.renewalFormId, now) !== 'none' || m.renewalUrl;
-  const renew = target(m.renewalFormId, m.renewalUrl, 'mailto:' + m.contactEmail + '?subject=Chapter%20membership%20renewal');
-  const form = findForm(forms, m.applicationFormId);
-  const state = linkedFormState(forms, m.applicationFormId, now);
-  const note =
-    state === 'open' && form.closesAt
-      ? `Applications are open until ${bdLabel(form.closesAt)}.`
-      : state === 'scheduled'
-        ? `Applications open ${bdLabel(form.opensAt)}.`
-        : state === 'ended' || state === 'closed'
-          ? 'Applications are closed right now. Check back soon.'
-          : '';
+  // Join and renew through the website forms chosen in the Chapter Editor; without an open form, say so.
+  const action = (formId, label, closed, cls) => {
+    const state = linkedFormState(forms, formId, now);
+    const form = findForm(forms, formId);
+    if (state === 'open')
+      return {
+        button: `<a class="btn ${cls}" ${formLinkAttrs(formId)}>${label}</a>`,
+        note: form.closesAt ? `Open until ${bdLabel(form.closesAt)}.` : '',
+      };
+    if (state === 'scheduled') return { button: '', note: `${closed.replace(' is closed now.', '')} opens ${bdLabel(form.opensAt)}.` };
+    return { button: '', note: closed };
+  };
+  const join = action(m.applicationFormId, 'Join now →', 'Membership registration for this year is closed now.', 'btn-primary');
+  const renew = action(m.renewalFormId, 'Renew membership', 'Membership renewal is closed now.', 'btn-outline');
+  const notes = [join.note, renew.note].filter(Boolean);
   const benefits = m.benefits.map((v) => `<li>${h(v)}</li>`).join('');
-  return `<div class="wrap membership-grid"><div class="membership-pitch"><p class="eyebrow">Join us now</p><h2>Start your journey with us</h2><p class="lead">${h(m.intro)}</p><div class="membership-actions"><a class="btn btn-primary" ${apply}>Join now →</a><a class="btn btn-outline" ${renew}>${renewing ? 'Renew membership' : 'Ask about renewal'}</a></div>${note ? `<p class="membership-note">${h(note)}</p>` : ''}</div><div class="membership-card"><h3>Why join?</h3><ul class="check-list">${benefits}</ul><details class="home-membership-details"><summary>Membership benefits &amp; renewal</summary><div><h4>Who can join?</h4><p>${h(m.eligibility)}</p><h4>General membership</h4><p>${h(m.general)}</p><h4>Premium membership</h4><p>${h(m.premium)}</p><h4>Renew your membership</h4><p>${h(m.renewal)}</p></div></details></div></div>`;
+  return `<div class="wrap membership-grid"><div class="membership-pitch"><p class="eyebrow">Join us now</p><h2>Start your journey with us</h2><p class="lead">${h(m.intro)}</p>${join.button || renew.button ? `<div class="membership-actions">${join.button}${renew.button}</div>` : ''}${notes.length ? `<ul class="membership-notes">${notes.map((n) => `<li>${h(n)}</li>`).join('')}</ul>` : ''}<div class="membership-card"><h3>Why join?</h3><ul class="check-list">${benefits}</ul><details class="home-membership-details"><summary>Membership benefits &amp; renewal</summary><div><h4>Who can join?</h4><p>${h(m.eligibility)}</p><h4>General membership</h4><p>${h(m.general)}</p><h4>Premium membership</h4><p>${h(m.premium)}</p><h4>Renew your membership</h4><p>${h(m.renewal)}</p></div></details></div></div>`;
 }
 
 /** Homepage: the next upcoming events, then the most recent ones (three cards). */

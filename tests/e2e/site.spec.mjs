@@ -206,7 +206,10 @@ test('an event registration form is built, answered once per transaction, checke
   await builder.locator('[name="status"]').selectOption('open');
   await builder.locator('[name="payAmount"]').fill('150 BDT');
   await builder.locator('[data-account] [data-k="number"]').fill('01700000000');
-  await builder.getByRole('button', { name: '+ Question' }).click();
+  // A section can go anywhere, not only at the end.
+  await builder.getByRole('button', { name: '+ Section here' }).first().click();
+  await expect(builder.locator('[data-q]').nth(1).locator('[data-k="type"]')).toHaveValue('section');
+  await builder.getByRole('button', { name: '+ Add question' }).click();
   await builder.locator('[data-q]').last().locator('[data-k="label"]').fill('T-shirt size');
   await builder.locator('[data-q]').last().locator('[data-k="type"]').selectOption('dropdown');
   await builder.locator('[data-q]').last().locator('[data-k="options"]').fill('S\nM\nL');

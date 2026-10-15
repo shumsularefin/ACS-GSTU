@@ -214,7 +214,9 @@ section { position: relative; }
 .membership-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(28px, 5vw, 64px); align-items: start; padding: clamp(28px, 4vw, 52px); border: 1.5px solid var(--blue); border-radius: 28px; }
 .membership-pitch .lead { color: var(--muted); }
 .membership-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 8px; }
-.membership-note { margin: 14px 0 0; font-size: 14px; color: var(--muted); }
+.membership-notes { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 6px; }
+.membership-notes li { position: relative; padding-left: 20px; font-size: 15px; color: var(--muted); }
+.membership-notes li::before { content: ""; position: absolute; left: 2px; top: .62em; width: 8px; height: 8px; border-radius: 2px; transform: rotate(45deg); background: var(--blue); }
 .membership-card { background: var(--mist); border-radius: 20px; padding: 28px; }
 .home-membership-details { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 14px; }
 .home-membership-details summary { cursor: pointer; font-weight: 500; color: var(--blue); list-style: none; display: flex; justify-content: space-between; align-items: center; }
@@ -472,3 +474,9 @@ fieldset.pf-q { margin: 0; min-width: 0; }
 .form-dialog .pf-done { box-shadow: none; }
 html.form-dialog-open { overflow: hidden; }
 .event-register { display: grid; gap: 8px; justify-items: start; }
+/* Choice questions use a fieldset; its legend sits inside the card instead of on the border. */
+fieldset.pf-q > legend.pf-label { float: left; width: 100%; margin-bottom: 6px; }
+fieldset.pf-q > legend.pf-label + * { clear: both; }
+.pf-done { justify-items: center; }
+.pf-done .btn { min-width: 220px; }
+.name-link { color: inherit; text-decoration: underline; text-underline-offset: 3px; }

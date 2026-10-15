@@ -362,3 +362,7 @@
 .ed-fb-pay { border: 1.5px solid var(--ed-blue); }
 .ed-fb-pay .ed-fb-q-head .ed-muted { font-size: 13px; }
 .ed-fb-website { align-self: end; margin: 0 0 10px; padding: 10px 12px; border-radius: var(--ed-radius); background: var(--ed-bg); font-size: 14px; }
+.ed-fb-insert { display: flex; justify-content: center; gap: 8px; margin: -4px 0; opacity: .55; transition: opacity .15s; }
+.ed-fb-insert:hover, .ed-fb-insert:focus-within { opacity: 1; }
+.ed-fb-insert button { border: 1px dashed var(--ed-line); background: var(--ed-card); color: var(--ed-blue); border-radius: 999px; padding: 4px 12px; font: 500 12.5px Poppins, sans-serif; cursor: pointer; }
+.ed-fb-insert button:hover { border-color: var(--ed-blue); border-style: solid; }

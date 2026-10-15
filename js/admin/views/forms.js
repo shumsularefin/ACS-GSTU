@@ -318,7 +318,15 @@ function renderBuilder(root, app, entry, name) {
 
         <section class="ed-fb-block">
           <h4>Questions <span class="ed-count">${v.fields.filter((f) => !answerless(f)).length}</span></h4>
-          <div class="ed-fb-questions">${v.fields.map((f, i) => questionCard(f, i, v.fields, editable)).join('')}
+          <div class="ed-fb-questions">${v.fields
+            .map(
+              (f, i) =>
+                questionCard(f, i, v.fields, editable) +
+                (editable && i < v.fields.length - 1
+                  ? `<div class="ed-fb-insert" aria-label="Insert after question ${i + 1}"><button type="button" data-add="short" data-at="${i + 1}">+ Question here</button><button type="button" data-add="section" data-at="${i + 1}">+ Section here</button></div>`
+                  : ''),
+            )
+            .join('')}
           <input type="hidden" name="payEnabled" value="${v.payment.enabled ? '1' : ''}">
           ${
             v.payment.enabled
@@ -354,7 +362,7 @@ function renderBuilder(root, app, entry, name) {
                 <p class="ed-muted">Each transaction ID is accepted once, so the same payment cannot be used for two registrations. Mark payments as checked under Responses.</p></div>`
               : ''
           }</div>
-          ${editable ? `<div class="ed-actions ed-fb-add"><button type="button" class="ed-btn" data-add="short">+ Question</button><button type="button" class="ed-btn ed-btn-quiet" data-add="section">+ Section heading</button>${v.payment.enabled ? '' : '<button type="button" class="ed-btn ed-btn-quiet" data-add-payment>+ Payment section</button>'}</div>` : ''}
+          ${editable ? `<div class="ed-actions ed-fb-add"><button type="button" class="ed-btn" data-add="short">+ Add question</button><button type="button" class="ed-btn" data-add="section">+ Add section</button>${v.payment.enabled ? '' : '<button type="button" class="ed-btn ed-btn-quiet" data-add-payment>+ Payment section</button>'}</div>` : ''}
         </section>
 
         <section class="ed-fb-block">
@@ -415,8 +423,9 @@ function renderBuilder(root, app, entry, name) {
     const index = card ? $$('[data-q]', form).indexOf(card) : -1;
     if (button.dataset.add) {
       const section = button.dataset.add === 'section';
+      const at = button.dataset.at === undefined ? -1 : Number(button.dataset.at);
       change((value) =>
-        value.fields.push({
+        value.fields.splice(at < 0 ? value.fields.length : at, 0, {
           id: newFieldId(),
           type: section ? 'section' : 'short',
           label: section ? 'New section' : 'New question',
@@ -427,7 +436,7 @@ function renderBuilder(root, app, entry, name) {
           showIf: null,
         }),
       );
-      $$('[data-q]', root).at(-1)?.querySelector('[data-k="label"]')?.select();
+      $$('[data-q]', root).at(at)?.querySelector('[data-k="label"]')?.select();
     } else if (button.dataset.move) {
       const to = index + Number(button.dataset.move);
       change((value) => value.fields.splice(to, 0, value.fields.splice(index, 1)[0]));
