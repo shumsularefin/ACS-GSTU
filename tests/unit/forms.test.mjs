@@ -215,3 +215,24 @@ test('without an open form, membership registration and renewal say they are clo
   const team = renderTeam({ team: { founders: [{ name: 'Shumsul Arefin', role: 'Founder', image: '' }], committees: {} }, events: [] });
   assert.ok(team.includes('<a class="name-link" href="https://shumsul-arefin.web.app"'));
 });
+
+test('the membership section keeps its two columns', async () => {
+  const { normalizeMembership } = await import('../../js/lib/content-model.js');
+  const { renderMembership } = await import('../../js/lib/content-render.js');
+  const membership = normalizeMembership({
+    intro: 'Join',
+    eligibility: 'Students',
+    general: 'General',
+    premium: 'Premium',
+    renewal: 'Renew',
+    benefits: ['Friends'],
+    applicationFormId: 'join',
+    contactEmail: 'chapter@example.com',
+  });
+  for (const forms of [[], [{ id: 'join', title: 'Join', kind: 'member', status: 'open', opensAt: '', closesAt: '' }]]) {
+    const html = renderMembership({ membership, forms });
+    const pitch = html.slice(html.indexOf('membership-pitch'), html.indexOf('membership-card'));
+    assert.equal((pitch.match(/<div/g) || []).length, (pitch.match(/<\/div>/g) || []).length, 'the pitch column closes before the card');
+    assert.equal((html.match(/<div/g) || []).length, (html.match(/<\/div>/g) || []).length);
+  }
+});
