@@ -1,18 +1,17 @@
-<header class="header hero">
-  <div class="hero-collage" id="hero-collage" aria-hidden="true">{{heroTiles}}<span class="hero-spark s1"></span><span class="hero-spark s2"></span><span class="hero-spark s3"></span></div>
+<header class="header hero{{heroClass}}">
+  <div class="hero-slides" id="hero-slides" aria-hidden="true">{{heroSlides}}</div>
   <div class="wrap hero-content">
     <div class="tagline"><h6>American Chemical Society</h6></div>
     <h1>STUDENT<br>
       <span>CHAPTER</span></h1>
-    <p class="hero-lead">Connect, learn and grow with chemistry at Gopalganj Science and Technology University.</p>
+    <div class="slide-btn"><a href="https://www.gstu.edu.bd/s/"><span class="uni-dot" aria-hidden="true"></span><b>Gopalganj Science and Technology University, Gopalganj</b></a></div>
     <div class="hero-actions">
       <div id="open-events" class="open-events"{{openEventHidden}}>{{openEvent}}</div>
       <a class="btn btn-aqua" href="activities.html">Explore events <span class="play" aria-hidden="true"></span></a>
       <a class="btn btn-ghost" href="#membership">Become a member</a>
     </div>
-    <div class="slide-btn"><a href="https://www.gstu.edu.bd/s/"><span class="uni-dot" aria-hidden="true"></span><b>Gopalganj Science and Technology University, Gopalganj</b></a></div>
   </div>
-  <div class="hero-controls" id="hero-controls" hidden><button id="hero-previous" type="button" aria-label="Show previous photos">←</button><button id="hero-play" type="button" aria-label="Pause slideshow">Pause</button><span id="hero-position" aria-live="polite">1 / 1</span><button id="hero-next" type="button" aria-label="Show next photos">→</button></div>
+  <div class="hero-controls" id="hero-controls" hidden><button id="hero-previous" type="button" aria-label="Show previous slide">←</button><button id="hero-play" type="button" aria-label="Pause slideshow">Pause</button><span id="hero-position" aria-live="polite">1 / 1</span><button id="hero-next" type="button" aria-label="Show next slide">→</button></div>
 </header>
 
 <section class="stats wrap" aria-label="Chapter at a glance">

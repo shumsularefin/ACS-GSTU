@@ -195,23 +195,18 @@ export function renderEventHighlights(data, now = new Date()) {
 
 /** The pill button on the homepage hero for the next event open for registration. */
 /** Photos for the homepage collage: the editable homepage images first, then member and event photos. */
-export function heroPhotos(data) {
-  const members = [...data.team.founders, ...Object.values(data.team.committees).flatMap((c) => c.members)];
-  // The bundled default hero artwork is not a photo, so it is left out of the collage.
-  const own = data.homepage.images.filter((src) => !/slide01/.test(src));
-  return [...new Set([...own, ...members.map((m) => m.image), ...data.events.map((e) => e.image)].filter(Boolean))];
+/** Hero slides: homepage images added in the Chapter Editor (the bundled default artwork is left out). */
+export function heroSlides(data) {
+  return [...new Set(data.homepage.images.filter((src) => src && !/slide01/.test(src)))];
 }
 
-const TILES = ['circle', 'diamond', 'round', 'round', 'circle', 'diamond'];
-/** Six shaped photo tiles (circles, rounded squares and diamonds) around the hero headline. */
-export function renderHeroTiles(data) {
-  const photos = heroPhotos(data);
-  if (!photos.length) return '';
-  return TILES.map((shape, i) => {
-    const src = photos[i % photos.length];
-    const image = photo(src, '').replace('loading="lazy"', 'loading="eager"');
-    return `<div class="hero-tile tile-${shape} t${i + 1}" data-tile="${i}">${image}</div>`;
-  }).join('');
+export function renderHeroSlides(data) {
+  return heroSlides(data)
+    .map((src, i) => {
+      const image = photo(src, '', i ? '' : 'active').replace(/ sizes="[^"]*"/, ' sizes="100vw"');
+      return i ? image : image.replace('loading="lazy"', 'loading="eager" fetchpriority="high"');
+    })
+    .join('');
 }
 
 export function renderOpenEvent(data, now = new Date()) {

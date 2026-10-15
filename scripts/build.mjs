@@ -19,7 +19,7 @@ import {
   renderMembership,
   renderOpenEvent,
   renderEventHighlights,
-  renderHeroTiles,
+  renderHeroSlides, heroSlides,
 } from '../js/lib/content-render.js';
 import { firestoreREST } from '../js/lib/firestore-rest.js';
 import { loadPublished } from '../js/lib/content-store.js';
@@ -224,7 +224,8 @@ page('index.html', {
     .replace('{{openEventHidden}}', openEvent ? '' : ' hidden')
     .replace('{{openEvent}}', openEvent)
     .replace('{{membership}}', `<div id="editable-content" data-view="membership">${renderMembership(data)}</div>`)
-    .replace('{{heroTiles}}', renderHeroTiles(data))
+    .replace('{{heroSlides}}', renderHeroSlides(data))
+    .replace('{{heroClass}}', heroSlides(data).length ? ' has-slides' : '')
     .replace('{{eventHighlights}}', renderEventHighlights(data))
     .replace('{{eventCount}}', String(data.events.length))
     .replace('{{teamYears}}', String(Object.keys(data.team.committees).length)),

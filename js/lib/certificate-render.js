@@ -339,7 +339,7 @@ async function formalSVG(c, { preview }) {
 
   return `${svgOpen(`${title} for ${c.name}`)}<title>${h(`${c.name} — ${c.event} — ${c.id}`)}</title>
     ${guilloche(PAPER)}
-    <image href="${art.globe}" x="${cx - 235}" y="165" width="470" height="470" opacity=".06"/>
+    <image href="${art.globe}" x="${cx - 235}" y="185" width="470" height="470" opacity=".06"/>
     <rect x="20" y="20" width="${WIDTH - 40}" height="${HEIGHT - 40}" fill="none" stroke="${INK}" stroke-width="1.8"/>
     <rect x="28" y="28" width="${WIDTH - 56}" height="${HEIGHT - 56}" fill="none" stroke="${GOLD}" stroke-width=".9"/>
     ${corner(28, 28)}${corner(WIDTH - 28, 28)}${corner(28, HEIGHT - 28)}${corner(WIDTH - 28, HEIGHT - 28)}
@@ -347,6 +347,7 @@ async function formalSVG(c, { preview }) {
     <g transform="translate(78 70)"><circle r="17" fill="none" stroke="${BLUE}" stroke-width="1.2" stroke-dasharray="1.5 2.2"/><path d="M-7 0l5 5 9-10" fill="none" stroke="${BLUE}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></g>
     ${text(f.semibold, shortCode(c.id), 58, 108, 10.5, { fill: INK, spacing: 1.6 })}
 
+    <g transform="translate(0 24)">
     ${heading(3, 3, BLUE).replace('<path', '<path opacity=".5"')}${heading(0, 0, INK)}
     ${text(f.serif, 'By the authority of its International Student Chapter at Gopalganj Science and Technology University', cx, 166, 14, { anchor: 'middle', fill: '#3a3848', maxWidth: 820 })}
     ${text(f.serif, 'and upon the recommendation of the Chapter Advisors', cx, 188, 14, { anchor: 'middle', fill: '#3a3848' })}
@@ -356,6 +357,7 @@ async function formalSVG(c, { preview }) {
     ${name(2.5, 2.5, BLUE).replace('<path', '<path opacity=".45"')}${name(0, 0, INK)}
     ${c.designation ? text(f.serifItalic, c.designation, cx, 446, 16, { anchor: 'middle', fill: '#3a3848', maxWidth: 640 }) : ''}
     ${cite.svg}${given.svg}
+    </g>
 
     ${signatories.map((s, i) => signature(s, i, i ? WIDTH - 250 : 250)).join('')}
     <rect x="${cx - 62}" y="602" width="124" height="124" rx="8" fill="${PAPER}"/>
@@ -487,9 +489,9 @@ async function awardSVG(c, { preview }) {
     ${text(f.light, `Date: ${labelDate(c.eventDate || c.dateIssued)}`, right, 392 + description.height + 3, 12, { anchor: 'end', fill: INKA })}
     ${signature(signatories[0], 229, 'start')}${signature(signatories[1], 784, 'end')}
     <g transform="translate(132 301)">${qr(certificateURL(c.id), 46, '#0d1b33')}</g>
-    ${text(f.regular, `Credential ID: ${c.id}`, 28, 572, 8.6, { fill: '#030405', maxWidth: 260 })}
-    ${text(f.regular, `Issued ${labelDate(c.dateIssued)} · Verify at acs-gstu.web.app`, 28, 583, 7.2, { fill: MUTED, maxWidth: 260 })}
-    ${preview ? text(f.semibold, 'SAMPLE — NOT ISSUED', right, 583, 8.5, { anchor: 'end', fill: '#b3261e', spacing: 1 }) : ''}`,
+    ${text(f.regular, `Credential ID: ${c.id}`, 28, 556, 8.6, { fill: '#030405', maxWidth: 260 })}
+    ${text(f.regular, `Issued ${labelDate(c.dateIssued)} · Verify at acs-gstu.web.app`, 28, 567, 7.2, { fill: MUTED, maxWidth: 260 })}
+    ${preview ? text(f.semibold, 'SAMPLE — NOT ISSUED', right, 567, 8.5, { anchor: 'end', fill: '#b3261e', spacing: 1 }) : ''}`,
     `${award.label} certificate for ${c.name}`,
   );
 }
