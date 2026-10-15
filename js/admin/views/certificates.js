@@ -449,11 +449,27 @@ function renderRecords(root, app) {
     );
     const rows = records.map(
       (c) =>
-        `<tr data-text="${h(`${c.name} ${c.event} ${c.id}`.toLowerCase())}"><td>${h(c.name)}</td><td>${h(LABEL[c.type] || c.type || 'Participation')}</td><td>${h(c.event)}</td><td>${h(c.createdAt ? when(c.createdAt) : c.dateIssued || '')}</td><td><span class="ed-tag ${c.status === 'revoked' ? 'ed-tag-revoked' : 'ed-tag-open'}">${c.status === 'revoked' ? 'Revoked' : 'Valid'}</span></td><td><a class="ed-mono" href="${h(certificateURL(c.id, location.origin))}" target="_blank" rel="noopener">${h(c.id)}</a></td></tr>`,
+        `<tr data-text="${h(`${c.name} ${c.event} ${c.id}`.toLowerCase())}"><td>${h(c.name)}</td><td>${h(LABEL[c.type] || c.type || 'Participation')}</td><td>${h(c.event)}</td><td>${h(c.createdAt ? when(c.createdAt) : c.dateIssued || '')}</td><td><span class="ed-tag ${c.status === 'revoked' ? 'ed-tag-revoked' : 'ed-tag-open'}">${c.status === 'revoked' ? 'Revoked' : 'Valid'}</span></td><td><a class="ed-mono" href="${h(certificateURL(c.id, location.origin))}" target="_blank" rel="noopener">${h(c.id)}</a></td><td>${c.status === 'revoked' ? `<button type="button" class="ed-btn ed-btn-small ed-btn-danger-quiet" data-delete-cert="${h(c.id)}" data-name="${h(c.name)}">Delete</button>` : ''}</td></tr>`,
     );
     $('[data-list]', root).innerHTML = records.length
-      ? `<p class="ed-muted">${records.length} certificates, newest first.</p><table class="ed-table"><thead><tr><th>Recipient</th><th>Category</th><th>Event or term</th><th>Issued</th><th>Status</th><th>Credential</th></tr></thead><tbody>${rows.join('')}</tbody></table>`
+      ? `<p class="ed-muted">${records.length} certificates, newest first.</p><table class="ed-table"><thead><tr><th>Recipient</th><th>Category</th><th>Event or term</th><th>Issued</th><th>Status</th><th>Credential</th><th><span class="ed-sr">Actions</span></th></tr></thead><tbody>${rows.join('')}</tbody></table>`
       : '<p class="ed-muted">No certificates have been issued yet.</p>';
+    $('[data-list]', root).addEventListener('click', async (e) => {
+      const t = e.target.closest('[data-delete-cert]');
+      if (!t) return;
+      const ok = await confirmDialog({
+        title: `Delete ${t.dataset.name}’s revoked certificate?`,
+        body: '<p>The record is removed permanently and its link will say “not found”. This is recorded in the activity log.</p>',
+        confirm: 'Delete permanently',
+        danger: true,
+      });
+      if (ok)
+        await busy(t, 'Deleting…', async () => {
+          await app.cloud.deleteCertificate(t.dataset.deleteCert);
+          toast('Certificate deleted.');
+          app.render();
+        });
+    });
     $('[data-search]', root).addEventListener('input', (e) => {
       const q = e.target.value.trim().toLowerCase();
       for (const row of $$('tr[data-text]', root)) row.hidden = q && !row.dataset.text.includes(q);

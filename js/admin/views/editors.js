@@ -21,6 +21,7 @@ const ACTIONS = {
   'certificate.revoke': 'Revoked certificate',
   'certificate.migrate': 'Moved certificate IDs to private storage',
   'certificate.catalog': 'Changed Certificate Center list',
+  'certificate.delete': 'Deleted revoked certificate',
 };
 
 export const editorsView = {

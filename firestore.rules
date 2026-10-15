@@ -79,7 +79,7 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time
         && request.resource.data.action in ['content.migrate', 'event.create', 'event.update', 'event.delete', 'page.update',
              'team.update', 'team.delete', 'image.add', 'image.delete', 'access.set', 'access.delete',
-             'certificate.issue', 'certificate.revoke', 'certificate.migrate', 'certificate.catalog']
+             'certificate.issue', 'certificate.revoke', 'certificate.migrate', 'certificate.catalog', 'certificate.delete']
         && request.resource.data.target is string && request.resource.data.target.size() <= 200
         && request.resource.data.detail is string && request.resource.data.detail.size() <= 1000
         && request.resource.data.get('ids', []) is list && request.resource.data.get('ids', []).size() <= 200;
@@ -226,7 +226,7 @@ service cloud.firestore {
 
     match /certificates/{certId} {
       // Records created before the split may still hold a membership ID; those stay private until migrated.
-      allow get: if resource.data.get('memID', '') == '' || isEditor();
+      allow get: if resource == null || resource.data.get('memID', '') == '' || isEditor();
       allow list: if isSuperAdmin();
       allow create: if isEditor() && certificateFields(certId) && mayIssue(request.resource.data.type)
         && auditedBatch(request.resource.data.auditId, ['certificate.issue'], certId);
@@ -241,7 +241,9 @@ service cloud.firestore {
             && !('memID' in request.resource.data) && !('certificate' in request.resource.data)
             && request.resource.data.migratedAt == request.time
             && auditedBatch(request.resource.data.auditId, ['certificate.migrate'], certId)));
-      allow delete: if false;
+      // Only revoked records (for example test certificates) can be removed, by a super-admin, with a log entry.
+      allow delete: if isSuperAdmin() && resource.data.get('status', 'issued') == 'revoked'
+        && removed('certificates:' + certId, 'certificate.delete', certId);
     }
 
     match /certificatePrivate/{certId} {
@@ -250,7 +252,8 @@ service cloud.firestore {
       allow create: if isEditor() && request.resource.data.keys().hasOnly(['memID', 'auditId'])
         && request.resource.data.memID is string && request.resource.data.memID.size() > 0 && request.resource.data.memID.size() <= 80
         && auditedBatch(request.resource.data.auditId, ['certificate.issue', 'certificate.migrate'], certId);
-      allow update, delete: if false;
+      allow update: if false;
+      allow delete: if isSuperAdmin() && removed('certificates:' + certId, 'certificate.delete', certId);
     }
 
     match /certificateLookup/{lookupId} {
@@ -278,7 +281,7 @@ service cloud.firestore {
           (logAt(request.resource.data.auditId).action == 'certificate.issue'
             && request.resource.data.get('archived', false) == (resource == null ? false : resource.data.get('archived', false)))
           || (isSuperAdmin() && logAt(request.resource.data.auditId).action in ['certificate.catalog', 'content.migrate']));
-      allow delete: if false;
+      allow delete: if isSuperAdmin() && removed('certificateEvents:' + eventId, 'certificate.delete', eventId);
     }
 
     // ---------------------------------------------------------------- retired layout (read-only)

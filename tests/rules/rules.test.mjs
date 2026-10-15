@@ -253,6 +253,13 @@ test('certificates: issue by role, public verification without membership IDs, r
   assert.equal((await getDoc(doc(anon.db, 'certificates', participants[0].id))).data().status, 'revoked');
   await assert.rejects(owner.cloud.issueCertificates(participants.slice(0, 1)), /already exists/);
   await assertFails(deleteDoc(doc(owner.db, 'certificates', participants[1].id)));
+  await assertFails(
+    owner.cloud.deleteCertificate(participants[1].id).catch(() => deleteDoc(doc(owner.db, 'certificates', participants[1].id))),
+  );
+  await assertFails(deleteDoc(doc(owner.db, 'certificates', participants[0].id)));
+  await assert.rejects(outreach.cloud.deleteCertificate(participants[0].id));
+  await assertSucceeds(owner.cloud.deleteCertificate(participants[0].id));
+  assert.equal((await getDoc(doc(anon.db, 'certificates', participants[0].id))).exists(), false);
 
   await assertFails(outreach.cloud.setCertificateEventArchived('green-workshop', true));
   await assertSucceeds(owner.cloud.setCertificateEventArchived('green-workshop', true));

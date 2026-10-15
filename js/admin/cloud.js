@@ -515,6 +515,27 @@ export function createCloud({ db, auth }) {
         tx.update(ref, { status: 'revoked', revokedAt: serverTimestamp(), revokedBy: uid(), auditId });
       });
     },
+    /** Permanently removes a revoked certificate (and its Certificate Center entry when nothing else uses it). */
+    async deleteCertificate(id) {
+      const snap = await getDocFromServer(doc(db, 'certificates', id));
+      if (!snap.exists()) throw Error('Credential not found.');
+      if (snap.data().status !== 'revoked') throw Error('Revoke the certificate before deleting it.');
+      const eventId = snap.data().eventId;
+      const others = eventId ? (await api.certificates()).filter((c) => c.eventId === eventId && c.id !== id).length : 1;
+      const batch = writeBatch(db);
+      const auditId = audit(batch, 'certificate.delete', id, `Deleted revoked certificate of ${snap.data().name || ''}`.trim());
+      batch.set(doc(db, 'removals', `certificates:${id}`), { auditId });
+      batch.delete(doc(db, 'certificates', id));
+      batch.delete(doc(db, 'certificatePrivate', id));
+      await batch.commit();
+      if (!others) {
+        const b2 = writeBatch(db);
+        const audit2 = audit(b2, 'certificate.delete', eventId, `Removed empty Certificate Center entry ${snap.data().event || ''}`.trim());
+        b2.set(doc(db, 'removals', `certificateEvents:${eventId}`), { auditId: audit2 });
+        b2.delete(doc(db, 'certificateEvents', eventId));
+        await b2.commit();
+      }
+    },
     async certificateEvents() {
       const snap = await getDocsFromServer(collection(db, 'certificateEvents'));
       return snap.docs.map((d) => d.data()).sort((a, b) => b.date.localeCompare(a.date));
