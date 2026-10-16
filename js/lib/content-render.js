@@ -10,6 +10,7 @@ import {
   TIMEZONE,
   findForm,
   linkedFormState,
+  visibleNews,
 } from './content-model.js';
 import { bdLabel } from './form-model.js';
 
@@ -281,4 +282,59 @@ export function renderOpenEvent(data, now = new Date()) {
       `<a class="hero-registration hero-registration-member" ${formLinkAttrs(memberForm)}><span>Member registration is open</span><span class="registration-arrow" aria-hidden="true">→</span></a>`,
     );
   return pills.join('');
+}
+
+// ------------------------------------------------------------------ news (Facebook Page posts)
+
+const newsDate = new Intl.DateTimeFormat('en-GB', { timeZone: TIMEZONE, day: 'numeric', month: 'long', year: 'numeric' });
+/** The first line of a post is its headline; the rest is the story. */
+function splitPost(text) {
+  const lines = text.split(/\r?\n/);
+  const index = lines.findIndex((l) => l.trim());
+  const first = index < 0 ? '' : lines[index].trim();
+  if (first.length > 140) return { headline: first.slice(0, 137).replace(/\s+\S*$/, '') + '…', rest: text.trim() };
+  return {
+    headline: first,
+    rest: lines
+      .slice(index + 1)
+      .join('\n')
+      .trim(),
+  };
+}
+const paragraphs = (text) =>
+  text
+    .split(/\n{2,}/)
+    .filter((p) => p.trim())
+    .map((p) => `<p>${linkNames(h(p.trim())).replace(/\n/g, '<br>')}</p>`)
+    .join('');
+
+function newsCard(post, { full = false } = {}) {
+  const { headline, rest } = splitPost(post.text);
+  const date = `<time datetime="${h(post.createdAt)}">${newsDate.format(new Date(post.createdAt))}</time>`;
+  const media = post.image
+    ? `<div class="news-media"><img src="${h(post.image)}" alt="" loading="lazy" decoding="async"></div>`
+    : '<div class="news-media news-media-empty" aria-hidden="true"><span>ACS</span></div>';
+  const excerpt = rest.replace(/\s+/g, ' ');
+  const body = full
+    ? paragraphs(rest)
+    : excerpt
+      ? `<p class="news-excerpt">${h(excerpt.slice(0, 220))}${excerpt.length > 220 ? '…' : ''}</p>`
+      : '';
+  return `<article class="news-card" id="post-${h(post.id)}">${media}<div class="news-body">${date}<h3>${linkNames(h(headline || 'Chapter update'))}</h3>${body}<a class="news-link" href="${h(post.link)}" target="_blank" rel="noopener">View on Facebook ↗</a></div></article>`;
+}
+
+/** The News page: every visible post, newest first. */
+export function renderNews(data) {
+  const posts = visibleNews(data);
+  const list = posts.length
+    ? `<div class="news-grid">${posts.map((p) => newsCard(p, { full: true })).join('')}</div>`
+    : '<div class="empty-state"><h2>News will appear here soon</h2><p>Posts from our Facebook Page show up here automatically.</p><a href="https://www.facebook.com/acs.gstu" target="_blank" rel="noopener">Visit our Facebook Page ↗</a></div>';
+  return `<section class="archive news-archive"><div class="archive-heading"><h6>FROM OUR FACEBOOK PAGE</h6><h1 data-text="NEWS">News &amp; updates</h1></div>${list}</section>`;
+}
+
+/** Homepage: the three latest posts, or nothing when there are none. */
+export function renderNewsHighlights(data) {
+  const posts = visibleNews(data).slice(0, 3);
+  if (!posts.length) return '';
+  return `<div class="wrap"><div class="section-head row-head" data-reveal><div><p class="eyebrow">From our Facebook Page</p><h2>Latest news</h2></div><a class="btn btn-outline" href="news.html">All news →</a></div><div class="news-grid news-grid-home">${posts.map((p) => newsCard(p)).join('')}</div></div>`;
 }

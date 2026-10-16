@@ -369,6 +369,16 @@ test('forms: editors publish forms, anyone answers while open, answers stay priv
   assert.equal(await rest.get('forms/workshop-registration'), null);
 });
 
+test('news: editors hide Facebook posts; everyone reads the list; nothing else is stored', async () => {
+  const { outreach, stranger, anon } = accounts;
+  await assertSucceeds(outreach.cloud.savePage('news', { hidden: ['1001_2002'] }, 0));
+  assert.deepEqual((await getDoc(doc(anon.db, 'pages', 'news'))).data().hidden, ['1001_2002']);
+  await assertFails(stranger.cloud.savePage('news', { hidden: [] }, 1));
+  await assertFails(outreach.cloud.savePage('news', { hidden: [], text: 'not allowed' }, 1));
+  await assertFails(outreach.cloud.savePage('news', { hidden: 'all' }, 1));
+  await assertSucceeds(outreach.cloud.savePage('news', { hidden: [] }, 1));
+});
+
 test('images, activity log and removals', async () => {
   const { owner, outreach, other, anon, delegate } = accounts;
   const image = 'data:image/jpeg;base64,' + Buffer.from('jpeg').toString('base64');

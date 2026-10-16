@@ -5,7 +5,7 @@ rules_version = '2';
 // Layout (one document per area, so each area has its own small rule):
 //   site/meta                 public   revision counter used for freshness checks and rebuilds
 //   events/{eventId}          public   one event per document
-//   pages/homepage|membership public   homepage images, membership information
+//   pages/homepage|membership|news  public   homepage images, membership information, hidden News posts
 //   team/founders|{year}      public   committee members and public roster (names and tiers only)
 //   rosterPrivate/{year}      private  membership IDs keyed by roster entry
 //   certificates/{id}         public   verification record (no membership ID)
@@ -148,11 +148,18 @@ service cloud.firestore {
         && shortText(d.get('applicationFormId', ''), 80) && shortText(d.get('renewalFormId', ''), 80);
     }
 
+    // News posts come from the Facebook Page at build time; editors only choose which to hide.
+    function newsFields(d) {
+      return d.keys().hasOnly(['hidden'].concat(pageMeta())) && d.hidden is list && d.hidden.size() <= 2000;
+    }
+
     match /pages/{page} {
-      allow get: if page in ['homepage', 'membership'];
+      allow get: if page in ['homepage', 'membership', 'news'];
       allow list: if false;
       allow create, update: if isEditor() && nextRevision()
-        && (page == 'homepage' ? homepageFields(request.resource.data) : page == 'membership' && membershipFields(request.resource.data))
+        && (page == 'homepage' ? homepageFields(request.resource.data)
+          : page == 'membership' ? membershipFields(request.resource.data)
+          : page == 'news' && newsFields(request.resource.data))
         && (migrating() || stamped('page.update', page));
       allow delete: if false;
     }

@@ -2,7 +2,8 @@ name: Website checks and Firebase deployment
 
 # Pushes to main: run every check, then build from the published Firestore content and deploy Hosting.
 # Every 15 minutes: rebuild and redeploy only when editors published something new, so search
-# engines and link previews pick it up. Visitors already see published changes immediately.
+# engines and link previews pick it up, or when the Facebook Page has new posts for News.
+# Visitors already see published changes immediately.
 on:
   push:
     branches: [main]
@@ -63,6 +64,11 @@ jobs:
         with:
           node-version: 24
       - id: compare
+        env:
+          # News from the Facebook Page (optional; see FACEBOOK.md).
+          FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
+          FACEBOOK_PAGE_TOKEN: ${{ secrets.FACEBOOK_PAGE_TOKEN }}
+          FACEBOOK_GRAPH_VERSION: ${{ secrets.FACEBOOK_GRAPH_VERSION }}
         run: node scripts/needs-rebuild.mjs
 
   deploy:
@@ -87,6 +93,9 @@ jobs:
       - name: Build from the published content
         env:
           CONTENT_SOURCE: firestore
+          FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
+          FACEBOOK_PAGE_TOKEN: ${{ secrets.FACEBOOK_PAGE_TOKEN }}
+          FACEBOOK_GRAPH_VERSION: ${{ secrets.FACEBOOK_GRAPH_VERSION }}
         run: node scripts/build.mjs
       - name: Check the built website
         run: node --test tests/unit/site.test.mjs

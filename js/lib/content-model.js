@@ -264,6 +264,39 @@ export function normalizeMembership(raw) {
   return m;
 }
 
+// ------------------------------------------------------------------ news (Facebook Page posts)
+
+/** A post baked by the build: its photo is saved with the site (media/news/…). */
+export function normalizeNewsPost(raw) {
+  const p = {
+    id: text(raw.id, 80),
+    text: text(raw.text, 5000),
+    createdAt: text(raw.createdAt, 40),
+    link: text(raw.link, 2000),
+    image: text(raw.image, 200),
+  };
+  if (!/^[0-9_]{3,80}$/.test(p.id)) throw Error('Invalid post.');
+  if (!Number.isFinite(Date.parse(p.createdAt))) throw Error('Invalid post date.');
+  if (!/^https:\/\/(www\.|m\.|web\.)?facebook\.com\//.test(p.link)) throw Error('Invalid post link.');
+  if (p.image && !/^media\/news\/[0-9_]+\.(jpg|png|webp)$/.test(p.image)) throw Error('Invalid post image.');
+  return p;
+}
+export function normalizeNews(list) {
+  const result = [];
+  for (const raw of Array.isArray(list) ? list : []) {
+    try {
+      result.push(normalizeNewsPost(raw));
+    } catch {
+      /* Skipped. */
+    }
+  }
+  return result.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+/** Post IDs hidden in the Chapter Editor. */
+export const normalizeNewsHidden = (raw) =>
+  [...new Set((Array.isArray(raw?.hidden) ? raw.hidden : []).map(String).filter((id) => /^[0-9_]{3,80}$/.test(id)))].slice(0, 2000);
+export const visibleNews = (data) => (data.news || []).filter((p) => !(data.newsHidden || []).includes(p.id));
+
 export function normalizeHomepage(raw) {
   const images = typeof raw?.images === 'string' ? raw.images.split(/\r?\n/) : raw?.images;
   const list = (Array.isArray(images) ? images : []).map((url) => safeURL(url, true)).filter(Boolean);
@@ -303,6 +336,8 @@ export function normalizeContent(raw, options = {}) {
     membership: normalizeMembership(raw.membership),
     team: normalizeTeam(raw.team, options),
     forms: normalizeForms(raw.forms),
+    news: normalizeNews(raw.news),
+    newsHidden: normalizeNewsHidden({ hidden: raw.newsHidden }),
   };
 }
 

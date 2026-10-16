@@ -10,7 +10,15 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import * as esbuild from 'esbuild';
-import { normalizeContent, publicContent, escapeHTML as h, calendarICS, contentSignature } from '../js/lib/content-model.js';
+import {
+  normalizeContent,
+  normalizeNews,
+  visibleNews,
+  publicContent,
+  escapeHTML as h,
+  calendarICS,
+  contentSignature,
+} from '../js/lib/content-model.js';
 import {
   configureRender,
   renderEvents,
@@ -21,8 +29,11 @@ import {
   renderEventHighlights,
   renderHeroSlides,
   heroSlides,
+  renderNews,
+  renderNewsHighlights,
 } from '../js/lib/content-render.js';
 import { firestoreREST } from '../js/lib/firestore-rest.js';
+import { facebookConfig, fetchPagePosts, postsSignature } from '../js/lib/facebook.js';
 import { loadPublished } from '../js/lib/content-store.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -74,7 +85,7 @@ const data = publicContent(loaded);
 const publicRoot = path.resolve('public');
 if (path.dirname(publicRoot) !== root || path.basename(publicRoot) !== 'public') throw Error('Unexpected output directory');
 fs.rmSync(publicRoot, { recursive: true, force: true });
-for (const dir of ['css', 'js', 'data', 'calendar', 'media']) fs.mkdirSync(path.join(publicRoot, dir), { recursive: true });
+for (const dir of ['css', 'js', 'data', 'calendar', 'media', 'media/news']) fs.mkdirSync(path.join(publicRoot, dir), { recursive: true });
 const write = (file, body) => fs.writeFileSync(path.join(publicRoot, file), body);
 
 // Uploaded images are baked into the site so visitors do not spend database reads on them.
@@ -92,6 +103,59 @@ for (const reference of references) {
     warn(`Uploaded image ${id} could not be baked (${error.message}); it will load from the database.`);
   }
 }
+// Facebook Page posts for News. With the GitHub secrets set, the latest posts are fetched and their
+// photos saved with the site (Facebook photo links expire). Otherwise, or when Facebook is
+// unreachable, the News already on the live site is kept.
+const LIVE = 'https://acs-gstu.web.app/';
+const imageTypes = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+async function savePicture(id, url) {
+  try {
+    const response = await fetch(url);
+    const ext = imageTypes[(response.headers.get('content-type') || '').split(';')[0].trim()];
+    if (!response.ok || !ext) throw Error(`status ${response.status}`);
+    const body = Buffer.from(await response.arrayBuffer());
+    if (body.length > 8 * 1024 * 1024) throw Error('too large');
+    write(`media/news/${id}.${ext}`, body);
+    return `media/news/${id}.${ext}`;
+  } catch (error) {
+    warn(`Photo of post ${id} could not be saved (${error.message}).`);
+    return '';
+  }
+}
+async function loadNews() {
+  if (source === 'seed') return { connected: false, signature: '', posts: [] };
+  const facebook = facebookConfig();
+  if (facebook)
+    try {
+      const posts = await fetchPagePosts(facebook);
+      const saved = [];
+      for (const p of posts)
+        saved.push({
+          id: p.id,
+          text: p.text,
+          createdAt: p.createdAt,
+          link: p.link,
+          image: p.picture ? await savePicture(p.id, p.picture) : '',
+        });
+      console.log(`News: ${saved.length} Facebook post(s).`);
+      return { connected: true, signature: postsSignature(posts), posts: saved };
+    } catch (error) {
+      warn(`Facebook posts unavailable (${error.message}); keeping the News already published.`);
+    }
+  try {
+    const live = await fetch(LIVE + 'data/news.json', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null));
+    if (!live) return { connected: false, signature: '', posts: [] };
+    const posts = normalizeNews(live.posts);
+    for (const p of posts) if (p.image) p.image = (await savePicture(p.id, LIVE + p.image)) || '';
+    return { connected: !!live.connected, signature: live.signature || '', posts };
+  } catch {
+    return { connected: false, signature: '', posts: [] };
+  }
+}
+const newsFeed = await loadNews();
+data.news = newsFeed.posts;
+write('data/news.json', JSON.stringify(newsFeed));
+
 const images = json('data/image-manifest.json');
 configureRender({ manifest: images, media, events: data.events.map((e) => e.id) });
 
@@ -130,6 +194,7 @@ fs.cpSync('js/vendor', path.join(publicRoot, 'js/vendor'), { recursive: true, fi
 const navItems = [
   ['index', 'Home'],
   ['activities', 'Activities'],
+  ...(visibleNews(data).length ? [['news', 'News']] : []),
   ['team', 'Team'],
   ['certificates', 'Certificate Center'],
   ['about', 'About'],
@@ -264,6 +329,7 @@ page('index.html', {
     .replace('{{heroSlides}}', renderHeroSlides(data))
     .replace('{{heroClass}}', heroSlides(data).length ? ' has-slides' : '')
     .replace('{{eventHighlights}}', renderEventHighlights(data))
+    .replace('{{news}}', `<div id="editable-content" data-view="news-highlights">${renderNewsHighlights(data)}</div>`)
     .replace('{{eventCount}}', String(data.events.length))
     .replace('{{teamYears}}', String(Object.keys(data.team.committees).length)),
 });
@@ -301,6 +367,14 @@ for (const name of ['certificates', 'verify'])
   });
 
 // Events: one archive page filtered by ?year=&type=, and one page per event for sharing and search.
+// News: posts from the chapter's Facebook Page (see FACEBOOK.md), minus those hidden in the Chapter Editor.
+page('news.html', {
+  title: 'News',
+  description: 'News and updates from the ACS Student Chapter at GSTU, from our Facebook Page.',
+  active: 'news',
+  view: 'news',
+  body: renderNews(data),
+});
 page('activities.html', {
   title: 'Events',
   description: 'Chapter events and activities.',

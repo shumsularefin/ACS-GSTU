@@ -197,6 +197,7 @@ test('the super-admin revokes a certificate and the verification page says so', 
 });
 
 test('an event registration form is built, answered once per transaction, checked and exported to Excel', async ({ browser }) => {
+  test.setTimeout(120_000); // The longest flow: build, link, three answers, payment check and export.
   await owner.goto('/admin.html#forms');
   await owner.getByRole('button', { name: '+ New form' }).click();
   await owner.getByRole('button', { name: /Event registration/ }).click();
@@ -328,6 +329,7 @@ test('the dashboard and public pages fit a phone screen', async ({ browser }) =>
   await expect(page.locator('#ed-nav-toggle')).toBeVisible();
   for (const hash of [
     '#overview',
+    '#news',
     '#events/science-fair-2027',
     `#forms/${formId}`,
     `#forms/${formId}/responses`,

@@ -162,7 +162,7 @@ export function createCloud({ db, auth }) {
     /** Everything the dashboard edits, with revisions for conflict checks. Private IDs only for super-admins. */
     async load(currentRole) {
       const superAdmin = currentRole === 'super-admin';
-      const [meta, eventDocs, homepage, membership, teamDocs, privateDocs, formDocs] = await Promise.all([
+      const [meta, eventDocs, homepage, membership, teamDocs, privateDocs, formDocs, news] = await Promise.all([
         getDocFromServer(metaRef),
         getDocsFromServer(collection(db, 'events')),
         getDocFromServer(doc(db, 'pages', 'homepage')),
@@ -170,6 +170,7 @@ export function createCloud({ db, auth }) {
         getDocsFromServer(collection(db, 'team')),
         superAdmin ? getDocsFromServer(collection(db, 'rosterPrivate')) : null,
         getDocsFromServer(collection(db, 'forms')).catch(() => null), // Older rules have no forms yet.
+        getDocFromServer(doc(db, 'pages', 'news')).catch(() => null),
       ]);
       const ids = Object.fromEntries((privateDocs?.docs || []).map((d) => [d.id, d.data().ids || {}]));
       const privateRevisions = Object.fromEntries((privateDocs?.docs || []).map((d) => [d.id, d.data().revision || 0]));
@@ -197,6 +198,9 @@ export function createCloud({ db, auth }) {
           ]),
         ),
         formsUnavailable: formDocs === null,
+        newsSettings: news?.exists()
+          ? { hidden: news.data().hidden || [], revision: news.data().revision || 0 }
+          : { hidden: [], revision: 0 },
         forms: (formDocs?.docs || []).map((d) => ({
           value: { ...stripMeta(d.data()), opensAt: d.data().opensAt?.toDate?.() || null, closesAt: d.data().closesAt?.toDate?.() || null },
           revision: d.data().revision || 0,
@@ -234,10 +238,15 @@ export function createCloud({ db, auth }) {
     },
     savePage(name, value, baseRevision) {
       return saveDocument(doc(db, 'pages', name), {
-        section: name === 'homepage' ? 'Homepage images' : 'Membership information',
+        section: name === 'homepage' ? 'Homepage images' : name === 'news' ? 'News' : 'Membership information',
         action: 'page.update',
         target: name,
-        detail: name === 'homepage' ? `${value.images.length} homepage image(s)` : 'Membership information updated',
+        detail:
+          name === 'homepage'
+            ? `${value.images.length} homepage image(s)`
+            : name === 'news'
+              ? `${value.hidden.length} hidden post(s)`
+              : 'Membership information updated',
         baseRevision,
         data: () => withoutEmptyLinks(value),
       });

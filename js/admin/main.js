@@ -12,6 +12,7 @@ import { homepageView } from './views/homepage.js';
 import { membershipView } from './views/membership.js';
 import { teamView } from './views/team.js';
 import { formsView } from './views/forms.js';
+import { newsView } from './views/news.js';
 import { certificatesView } from './views/certificates.js';
 import { editorsView } from './views/editors.js';
 import { backupsView } from './views/backups.js';
@@ -22,6 +23,7 @@ const views = [
   overviewView,
   eventsView,
   formsView,
+  newsView,
   homepageView,
   membershipView,
   teamView,

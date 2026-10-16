@@ -31,6 +31,7 @@ export function permissions(role) {
     membership: editor,
     team: superAdmin,
     import: superAdmin,
+    news: editor,
     forms: editor,
     manageAnyForm: superAdmin || role === 'administrator',
     deleteForms: superAdmin,

@@ -1,7 +1,7 @@
 // Keeps baked pages current: renders ?year=/?type=/?id= views from the baked content and swaps in
 // content published after the last build. Filters change in place, without a page reload.
 import { contentSignature } from '../lib/content-model.js';
-import { renderEvents, renderEvent, renderTeam, renderMembership } from '../lib/content-render.js';
+import { renderEvents, renderEvent, renderTeam, renderMembership, renderNews, renderNewsHighlights } from '../lib/content-render.js';
 import { bakedContent, freshContent, renderReady } from './site-data.js';
 
 const SITE = 'ACS Student Chapter, GSTU';
@@ -19,6 +19,8 @@ function render(view, data, options) {
   if (view === 'events') return renderEvents(data, options);
   if (view === 'team') return renderTeam(data, { year: /^(founders|20\d{2})$/.test(options.year || '') ? options.year : 'founders' });
   if (view === 'membership') return renderMembership(data);
+  if (view === 'news') return renderNews(data);
+  if (view === 'news-highlights') return renderNewsHighlights(data);
   return renderEvent(data, options.id, { inlineCalendar: true });
 }
 
@@ -28,10 +30,13 @@ function sectionSignature(view, data, options) {
       ? data.membership
       : view === 'team'
         ? data.team
-        : view === 'event'
-          ? data.events.find((e) => e.id === options.id)
-          : data.events;
-  return contentSignature([part ?? null, options]);
+        : view === 'news' || view === 'news-highlights'
+          ? [data.news, data.newsHidden]
+          : view === 'event'
+            ? data.events.find((e) => e.id === options.id)
+            : data.events;
+  // Linked forms change what the event and membership buttons say.
+  return contentSignature([part ?? null, data.forms ?? null, options]);
 }
 
 /** Replaces the view once its images are decoded, so cards never flash or jump. */
@@ -91,8 +96,10 @@ export function setupLiveContent() {
     for (const root of roots) root.dataset.signature = sectionSignature(root.dataset.view, baked, needsQuery ? {} : viewOptions(root));
     data = baked;
     if (needsQuery) for (const root of roots) await paint(root, data, new URL(location.href));
-    const fresh = await freshContent();
-    if (!fresh) return;
+    const latest = await freshContent();
+    if (!latest) return;
+    // Facebook posts come with the build; the database only says which ones are hidden.
+    const fresh = { ...latest, news: baked.news };
     data = fresh;
     window.dispatchEvent(new CustomEvent('chapter-content', { detail: fresh }));
     if (!interacted) {
