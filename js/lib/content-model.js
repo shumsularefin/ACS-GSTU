@@ -88,6 +88,10 @@ export function normalizeEvent(raw) {
     registrationFormId: formRef(raw.registrationFormId),
     surveyFormId: formRef(raw.surveyFormId),
     sourceUrl: safeURL(raw.sourceUrl),
+    // The editor's "Show the video" box; stored only when the video is hidden.
+    hideVideo: raw.showVideo === false || raw.hideVideo === true,
+    // Set by the build: the real address behind a Facebook share link (never stored).
+    videoUrl: safeURL(raw.videoUrl),
     startsAt: text(raw.startsAt, 35),
     endsAt: text(raw.endsAt, 35),
   };
@@ -145,6 +149,7 @@ export function eventFormValues(e) {
   const end = timed ? local(e.endsAt) : null;
   return {
     ...e,
+    showVideo: !e.hideVideo,
     endDate: timed ? (end.date !== e.date ? end.date : '') : e.endsAt && e.endsAt !== e.date ? e.endsAt : '',
     startTime: timed ? local(e.startsAt).time : '',
     endTime: timed ? end.time : '',

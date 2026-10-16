@@ -25,13 +25,15 @@ const FORM_KEYS = [
   'registrationFormId',
   'surveyFormId',
   'sourceUrl',
+  'showVideo',
 ];
-const pick = (v) => Object.fromEntries(FORM_KEYS.map((k) => [k, k === 'timed' ? !!v[k] : String(v[k] ?? '')]));
+const BOOLEANS = ['timed', 'showVideo'];
+const pick = (v) => Object.fromEntries(FORM_KEYS.map((k) => [k, BOOLEANS.includes(k) ? !!v[k] : String(v[k] ?? '')]));
 export const formFromEvent = (e) => {
   const v = eventFormValues(e);
   return pick({ ...v, timed: !!v.startTime });
 };
-const blank = () => pick({ category: 'outreach', registrationStatus: 'unpublished', date: '', timed: false });
+const blank = () => pick({ category: 'outreach', registrationStatus: 'unpublished', date: '', timed: false, showVideo: true });
 const toEvent = (v) => normalizeEvent({ ...v, startTime: v.timed ? v.startTime : '', endTime: v.timed ? v.endTime : '' });
 
 function badge(e, forms) {
@@ -140,7 +142,8 @@ function renderEditor(root, app, entry, name) {
           </fieldset>
           ${field({ label: 'Description', name: 'description', type: 'textarea', attrs: 'required maxlength="5000" rows="6"', wide: true })}
           ${imageFieldHTML({ name: 'image', label: 'Event photo', hint: 'Square photos look best on the events page. Images are optimized automatically.' })}
-          ${field({ label: 'Coverage link', name: 'sourceUrl', type: 'url', optional: true, attrs: 'placeholder="https://facebook.com/…"', hint: 'A post or album about the event. A YouTube or Facebook video link plays on the event page.', wide: true })}
+          ${field({ label: 'Coverage link', name: 'sourceUrl', type: 'url', optional: true, attrs: 'placeholder="https://facebook.com/…"', hint: 'A post, album or video about the event. A YouTube or Facebook video link can play on the event page.', wide: true })}
+          <label class="ed-check ed-wide"><input type="checkbox" name="showVideo"> Show the video on the event page (“Watch the event”), when the coverage link is a YouTube or Facebook video</label>
         </div>
         <details class="ed-advanced"${isNew ? '' : ' hidden'}><summary>Web address</summary>
           ${field({ label: 'Event ID', name: 'id', attrs: `maxlength="80" pattern="[a-z0-9]+(-[a-z0-9]+)*" ${isNew ? '' : 'readonly'}`, hint: 'Used in the event’s web address. Created from the title; it cannot change after publishing.' })}

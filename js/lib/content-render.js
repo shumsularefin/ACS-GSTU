@@ -147,13 +147,16 @@ export function videoEmbedURL(link) {
     return '';
   }
   const facebookVideo =
-    host === 'fb.watch' || (host === 'facebook.com' && (/\/(videos|reel|reels)\//.test(url.pathname) || url.pathname.startsWith('/watch')));
+    host === 'fb.watch' ||
+    (host === 'facebook.com' &&
+      (/\/(videos|reel|reels)\//.test(url.pathname) || /^\/share\/(v|r)\//.test(url.pathname) || url.pathname.startsWith('/watch')));
   if (facebookVideo) return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(link)}&show_text=false&width=1280`;
   return '';
 }
 
 function eventVideo(e) {
-  const src = e.sourceUrl ? videoEmbedURL(e.sourceUrl) : '';
+  const link = e.videoUrl || e.sourceUrl;
+  const src = link && !e.hideVideo ? videoEmbedURL(link) : '';
   if (!src) return '';
   return `<section class="event-video" aria-label="Event video"><h2>Watch the event</h2><div class="event-video-frame"><iframe src="${h(src)}" title="${h(e.title)}: event video" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div></section>`;
 }

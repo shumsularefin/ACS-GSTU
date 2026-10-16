@@ -46,7 +46,7 @@ export class ConflictError extends Error {
 
 // Form links are left out when empty, so events and membership still save under security rules
 // published before form links existed.
-const LINK_FIELDS = ['registrationFormId', 'surveyFormId', 'applicationFormId', 'renewalFormId'];
+const LINK_FIELDS = ['registrationFormId', 'surveyFormId', 'applicationFormId', 'renewalFormId', 'hideVideo', 'videoUrl'];
 const withoutEmptyLinks = (data) => Object.fromEntries(Object.entries(data).filter(([k, v]) => !(LINK_FIELDS.includes(k) && !v)));
 
 export function editorEmail(value) {

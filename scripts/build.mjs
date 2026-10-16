@@ -131,7 +131,9 @@ async function loadNews() {
   const facebook = facebookConfig();
   if (!facebook && process.env.GITHUB_ACTIONS) {
     const missing = ['FACEBOOK_PAGE_ID', 'FACEBOOK_PAGE_TOKEN'].filter((name) => !String(process.env[name] || '').trim());
-    notice(`Facebook is not connected: the repository secret${missing.length > 1 ? 's' : ''} ${missing.join(' and ')} ${missing.length > 1 ? 'are' : 'is'} missing.`);
+    notice(
+      `Facebook is not connected: the repository secret${missing.length > 1 ? 's' : ''} ${missing.join(' and ')} ${missing.length > 1 ? 'are' : 'is'} missing.`,
+    );
   }
   if (facebook)
     try {
@@ -146,7 +148,8 @@ async function loadNews() {
           image: p.picture ? await savePicture(p.id, p.picture) : '',
         });
       console.log(`News: ${saved.length} Facebook post(s).`);
-      if (!saved.length) notice('Facebook answered, but the Page has no posts the token can read. Check that the token is the Page token from me/accounts.');
+      if (!saved.length)
+        notice('Facebook answered, but the Page has no posts the token can read. Check that the token is the Page token from me/accounts.');
       return { connected: true, signature: postsSignature(posts), posts: saved };
     } catch (error) {
       warn(`Facebook posts unavailable (${error.message}); keeping the News already published.`);
@@ -162,6 +165,21 @@ async function loadNews() {
     return { connected: false, signature: '', posts: [] };
   }
 }
+// Facebook share links (facebook.com/share/v/…) redirect to the real video address, which the
+// Facebook player needs. Resolve them once per build.
+for (const e of data.events)
+  if (/^https:\/\/(www\.|m\.)?facebook\.com\/share\/(v|r)\//.test(e.sourceUrl))
+    try {
+      const response = await fetch(e.sourceUrl, { redirect: 'manual', headers: { 'User-Agent': 'Mozilla/5.0' } });
+      const target = new URL(response.headers.get('location') || '', e.sourceUrl);
+      if (/^(www\.)?facebook\.com$/.test(target.hostname) && /^\/(reel|watch|[^/]+\/videos)\b/.test(target.pathname))
+        e.videoUrl = target.pathname.startsWith('/watch')
+          ? `https://www.facebook.com/watch/?v=${target.searchParams.get('v')}`
+          : `https://www.facebook.com${target.pathname}`;
+    } catch (error) {
+      warn(`Video link of ${e.id} could not be resolved (${error.message}).`);
+    }
+
 const newsFeed = await loadNews();
 data.news = newsFeed.posts;
 write('data/news.json', JSON.stringify(newsFeed));
