@@ -140,7 +140,7 @@ function renderEditor(root, app, entry, name) {
           </fieldset>
           ${field({ label: 'Description', name: 'description', type: 'textarea', attrs: 'required maxlength="5000" rows="6"', wide: true })}
           ${imageFieldHTML({ name: 'image', label: 'Event photo', hint: 'Square photos look best on the events page. Images are optimized automatically.' })}
-          ${field({ label: 'Coverage link', name: 'sourceUrl', type: 'url', optional: true, attrs: 'placeholder="https://facebook.com/…"', hint: 'A post or album about the event.', wide: true })}
+          ${field({ label: 'Coverage link', name: 'sourceUrl', type: 'url', optional: true, attrs: 'placeholder="https://facebook.com/…"', hint: 'A post or album about the event. A YouTube or Facebook video link plays on the event page.', wide: true })}
         </div>
         <details class="ed-advanced"${isNew ? '' : ' hidden'}><summary>Web address</summary>
           ${field({ label: 'Event ID', name: 'id', attrs: `maxlength="80" pattern="[a-z0-9]+(-[a-z0-9]+)*" ${isNew ? '' : 'readonly'}`, hint: 'Used in the event’s web address. Created from the title; it cannot change after publishing.' })}

@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { facebookConfig, fetchPagePosts, postsSignature } from '../../js/lib/facebook.js';
 import { normalizeContent, normalizeNews, visibleNews } from '../../js/lib/content-model.js';
-import { renderNews, renderNewsHighlights } from '../../js/lib/content-render.js';
+import { renderNews, renderNewsHighlights, videoEmbedURL, renderEvent } from '../../js/lib/content-render.js';
+import { normalizeEvent } from '../../js/lib/content-model.js';
 
 const graphPosts = {
   data: [
@@ -61,7 +62,9 @@ test('News shows the latest posts, hides what editors hid, and links names', () 
   );
   const page = renderNews({ news, newsHidden: [] });
   assert.ok(page.indexOf('Lab safety workshop') < page.indexOf('Older post'), 'newest first');
-  assert.ok(page.includes('<h3>Lab safety workshop</h3>') && page.includes('href="https://shumsul-arefin.web.app"'));
+  assert.ok(page.includes('<h3>Lab safety workshop</h3>'));
+  assert.ok(!page.includes('Thanks, Shumsul'), 'cards show only the date and the first line');
+  assert.ok(page.includes('<a class="news-card"') && page.includes('href="https://www.facebook.com/acs.gstu/posts/2"'));
   assert.ok(page.includes('View on Facebook'));
   // Photos reserve their space (the site check requires width and height on every image).
   for (const [tag] of page.matchAll(/<img\b[^>]+>/g)) assert.ok(tag.includes('width=') && tag.includes('height='), tag);
@@ -83,4 +86,26 @@ test('baked content keeps its News and hidden list', () => {
   });
   assert.equal(content.news.length, 1);
   assert.deepEqual(content.newsHidden, ['1_9']);
+});
+
+test('YouTube and Facebook coverage videos play on the event page; other links stay links', () => {
+  assert.equal(videoEmbedURL('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=5'), 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+  assert.equal(videoEmbedURL('https://youtu.be/dQw4w9WgXcQ'), 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+  assert.equal(videoEmbedURL('https://www.youtube.com/shorts/abcDEF12345'), 'https://www.youtube-nocookie.com/embed/abcDEF12345');
+  assert.match(
+    videoEmbedURL('https://www.facebook.com/acs.gstu/videos/1234567890/'),
+    /^https:\/\/www\.facebook\.com\/plugins\/video\.php\?href=/,
+  );
+  assert.match(videoEmbedURL('https://fb.watch/abc123/'), /plugins\/video\.php/);
+  assert.match(videoEmbedURL('https://www.facebook.com/reel/987654321'), /plugins\/video\.php/);
+  assert.equal(videoEmbedURL('https://www.facebook.com/acs.gstu/posts/1'), '');
+  assert.equal(videoEmbedURL('https://example.com/watch?v=dQw4w9WgXcQ'), '');
+  const base = { id: 'fair', title: 'Fair', date: '2026-01-02', category: 'outreach', description: 'Fun.' };
+  const withVideo = normalizeEvent({ ...base, sourceUrl: 'https://youtu.be/dQw4w9WgXcQ' });
+  assert.ok(
+    renderEvent({ events: [withVideo], forms: [] }, 'fair').includes('<iframe src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"'),
+  );
+  const album = normalizeEvent({ ...base, sourceUrl: 'https://www.facebook.com/media/set/?set=a.1' });
+  const page = renderEvent({ events: [album], forms: [] }, 'fair');
+  assert.ok(!page.includes('<iframe') && page.includes('View event coverage'));
 });

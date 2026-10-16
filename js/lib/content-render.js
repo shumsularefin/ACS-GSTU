@@ -126,6 +126,38 @@ export function renderEvents(data, options = {}) {
   return `<section class="archive" data-year="${year}" data-type="${type}"><div class="archive-heading"><h6>OUR WORKS AND ACTIVITIES</h6><h1 data-text="ACTIVITY">Our Events</h1></div><nav class="category-tabs" aria-label="Event categories">${tabs}</nav><div class="archive-meta"><h2>${year} <span>/ ${categories[type]}</span></h2><span>${selected.length} ${selected.length === 1 ? 'event' : 'events'}</span></div>${results}${pagination(eventYears(data, year), year, (y) => eventsHref(y, type), 'Event years')}</section>`;
 }
 
+/**
+ * A coverage link to a YouTube or Facebook video becomes a player on the event page.
+ * Returns the embed address, or '' for any other link (which stays a plain link).
+ */
+export function videoEmbedURL(link) {
+  let url;
+  try {
+    url = new URL(link);
+  } catch {
+    return '';
+  }
+  const host = url.hostname.replace(/^(www\.|m\.|web\.)/, '');
+  const youtubeId = (id) => (/^[A-Za-z0-9_-]{6,20}$/.test(id || '') ? `https://www.youtube-nocookie.com/embed/${id}` : '');
+  if (host === 'youtu.be') return youtubeId(url.pathname.slice(1));
+  if (host === 'youtube.com' || host === 'music.youtube.com') {
+    if (url.pathname === '/watch') return youtubeId(url.searchParams.get('v'));
+    const [, kind, id] = url.pathname.split('/');
+    if (['shorts', 'live', 'embed'].includes(kind)) return youtubeId(id);
+    return '';
+  }
+  const facebookVideo =
+    host === 'fb.watch' || (host === 'facebook.com' && (/\/(videos|reel|reels)\//.test(url.pathname) || url.pathname.startsWith('/watch')));
+  if (facebookVideo) return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(link)}&show_text=false&width=1280`;
+  return '';
+}
+
+function eventVideo(e) {
+  const src = e.sourceUrl ? videoEmbedURL(e.sourceUrl) : '';
+  if (!src) return '';
+  return `<section class="event-video" aria-label="Event video"><h2>Watch the event</h2><div class="event-video-frame"><iframe src="${h(src)}" title="${h(e.title)}: event video" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div></section>`;
+}
+
 export function renderEvent(data, id, { now = new Date(), inlineCalendar = false } = {}) {
   const e = data.events.find((item) => item.id === id);
   if (!e)
@@ -160,7 +192,7 @@ export function renderEvent(data, id, { now = new Date(), inlineCalendar = false
     ? `<a class="button secondary" href="data:text/calendar;charset=utf-8,${h(encodeURIComponent(calendarICS(e)))}" download="${e.id}.ics">Download calendar (.ics)</a>`
     : `<a class="button secondary" href="calendar/${e.id}.ics" download>Download calendar (.ics)</a>`;
   const year = e.date.slice(0, 4);
-  return `<article class="event-detail"><a class="back-link" href="${eventsHref(year, e.category)}">← Back to ${categories[e.category].toLowerCase()} events</a><p class="eyebrow">${categories[e.category]} / ${eventDateLabel(e)}</p><h1>${h(e.title)}</h1><div class="detail-grid">${photo(e.image, e.title, 'detail-image')}<div><h2>About the event</h2><p>${linkNames(h(e.description))}</p><dl><dt>Date</dt><dd><time datetime="${e.date}">${eventDateLabel(e)}</time></dd>${times}<dt>Location</dt><dd>${h(e.location || 'Location not published.')}</dd><dt>Organized by</dt><dd>ACS Student Chapter, GSTU</dd></dl>${registration}<div class="event-actions">${survey}<a class="button secondary" href="${h(googleCalendarURL(e))}" target="_blank" rel="noopener noreferrer">Google Calendar ↗</a>${ics}</div>${e.sourceUrl ? `<a href="${h(e.sourceUrl)}" target="_blank" rel="noopener noreferrer">View event coverage ↗</a>` : ''}</div></div></article>`;
+  return `<article class="event-detail"><a class="back-link" href="${eventsHref(year, e.category)}">← Back to ${categories[e.category].toLowerCase()} events</a><p class="eyebrow">${categories[e.category]} / ${eventDateLabel(e)}</p><h1>${h(e.title)}</h1><div class="detail-grid">${photo(e.image, e.title, 'detail-image')}<div><h2>About the event</h2><p>${linkNames(h(e.description))}</p><dl><dt>Date</dt><dd><time datetime="${e.date}">${eventDateLabel(e)}</time></dd>${times}<dt>Location</dt><dd>${h(e.location || 'Location not published.')}</dd><dt>Organized by</dt><dd>ACS Student Chapter, GSTU</dd></dl>${registration}<div class="event-actions">${survey}<a class="button secondary" href="${h(googleCalendarURL(e))}" target="_blank" rel="noopener noreferrer">Google Calendar ↗</a>${ics}</div>${e.sourceUrl ? `<a href="${h(e.sourceUrl)}" target="_blank" rel="noopener noreferrer">View event coverage ↗</a>` : ''}</div></div>${eventVideo(e)}</article>`;
 }
 
 function members(list, cls = '', showRoles = true) {
@@ -301,33 +333,21 @@ function splitPost(text) {
       .trim(),
   };
 }
-const paragraphs = (text) =>
-  text
-    .split(/\n{2,}/)
-    .filter((p) => p.trim())
-    .map((p) => `<p>${linkNames(h(p.trim())).replace(/\n/g, '<br>')}</p>`)
-    .join('');
 
-function newsCard(post, { full = false } = {}) {
-  const { headline, rest } = splitPost(post.text);
-  const date = `<time datetime="${h(post.createdAt)}">${newsDate.format(new Date(post.createdAt))}</time>`;
+/** One post: a fixed-size photo, the date and the first line. The whole card opens the post on Facebook. */
+function newsCard(post) {
+  const { headline } = splitPost(post.text);
   const media = post.image
     ? `<div class="news-media"><img src="${h(post.image)}" alt="" width="800" height="500" loading="lazy" decoding="async"></div>`
     : '<div class="news-media news-media-empty" aria-hidden="true"><span>ACS</span></div>';
-  const excerpt = rest.replace(/\s+/g, ' ');
-  const body = full
-    ? paragraphs(rest)
-    : excerpt
-      ? `<p class="news-excerpt">${h(excerpt.slice(0, 220))}${excerpt.length > 220 ? '…' : ''}</p>`
-      : '';
-  return `<article class="news-card" id="post-${h(post.id)}">${media}<div class="news-body">${date}<h3>${linkNames(h(headline || 'Chapter update'))}</h3>${body}<a class="news-link" href="${h(post.link)}" target="_blank" rel="noopener">View on Facebook ↗</a></div></article>`;
+  return `<a class="news-card" id="post-${h(post.id)}" href="${h(post.link)}" target="_blank" rel="noopener">${media}<div class="news-body"><time datetime="${h(post.createdAt)}">${newsDate.format(new Date(post.createdAt))}</time><h3>${h(headline || 'Chapter update')}</h3><span class="news-link">View on Facebook ↗</span></div></a>`;
 }
 
 /** The News page: every visible post, newest first. */
 export function renderNews(data) {
   const posts = visibleNews(data);
   const list = posts.length
-    ? `<div class="news-grid">${posts.map((p) => newsCard(p, { full: true })).join('')}</div>`
+    ? `<div class="news-grid">${posts.map((p) => newsCard(p)).join('')}</div>`
     : '<div class="empty-state"><h2>News will appear here soon</h2><p>Posts from our Facebook Page show up here automatically.</p><a href="https://www.facebook.com/acs.gstu" target="_blank" rel="noopener">Visit our Facebook Page ↗</a></div>';
   return `<section class="archive news-archive"><div class="archive-heading"><h6>FROM OUR FACEBOOK PAGE</h6><h1 data-text="NEWS">News &amp; updates</h1></div>${list}</section>`;
 }
