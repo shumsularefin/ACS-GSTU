@@ -63,6 +63,8 @@ test('News shows the latest posts, hides what editors hid, and links names', () 
   assert.ok(page.indexOf('Lab safety workshop') < page.indexOf('Older post'), 'newest first');
   assert.ok(page.includes('<h3>Lab safety workshop</h3>') && page.includes('href="https://shumsul-arefin.web.app"'));
   assert.ok(page.includes('View on Facebook'));
+  // Photos reserve their space (the site check requires width and height on every image).
+  for (const [tag] of page.matchAll(/<img\b[^>]+>/g)) assert.ok(tag.includes('width=') && tag.includes('height='), tag);
   assert.deepEqual(
     visibleNews({ news, newsHidden: ['1_2'] }).map((p) => p.id),
     ['1_1'],
