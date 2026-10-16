@@ -122,9 +122,17 @@ async function savePicture(id, url) {
     return '';
   }
 }
+// In GitHub Actions, News problems also show as warnings on the run page (visible without the log).
+const notice = (message) => {
+  if (process.env.GITHUB_ACTIONS) console.log(`::warning title=News::${message.replace(/\s+/g, ' ')}`);
+};
 async function loadNews() {
   if (source === 'seed') return { connected: false, signature: '', posts: [] };
   const facebook = facebookConfig();
+  if (!facebook && process.env.GITHUB_ACTIONS) {
+    const missing = ['FACEBOOK_PAGE_ID', 'FACEBOOK_PAGE_TOKEN'].filter((name) => !String(process.env[name] || '').trim());
+    notice(`Facebook is not connected: the repository secret${missing.length > 1 ? 's' : ''} ${missing.join(' and ')} ${missing.length > 1 ? 'are' : 'is'} missing.`);
+  }
   if (facebook)
     try {
       const posts = await fetchPagePosts(facebook);
@@ -138,9 +146,11 @@ async function loadNews() {
           image: p.picture ? await savePicture(p.id, p.picture) : '',
         });
       console.log(`News: ${saved.length} Facebook post(s).`);
+      if (!saved.length) notice('Facebook answered, but the Page has no posts the token can read. Check that the token is the Page token from me/accounts.');
       return { connected: true, signature: postsSignature(posts), posts: saved };
     } catch (error) {
       warn(`Facebook posts unavailable (${error.message}); keeping the News already published.`);
+      notice(`Facebook posts unavailable: ${error.message}`);
     }
   try {
     const live = await fetch(LIVE + 'data/news.json', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null));
