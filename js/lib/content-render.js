@@ -312,7 +312,7 @@ function newsCard(post, { full = false } = {}) {
   const { headline, rest } = splitPost(post.text);
   const date = `<time datetime="${h(post.createdAt)}">${newsDate.format(new Date(post.createdAt))}</time>`;
   const media = post.image
-    ? `<div class="news-media"><img src="${h(post.image)}" alt="" loading="lazy" decoding="async"></div>`
+    ? `<div class="news-media"><img src="${h(post.image)}" alt="" width="800" height="500" loading="lazy" decoding="async"></div>`
     : '<div class="news-media news-media-empty" aria-hidden="true"><span>ACS</span></div>';
   const excerpt = rest.replace(/\s+/g, ' ');
   const body = full
