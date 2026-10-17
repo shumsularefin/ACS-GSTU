@@ -109,3 +109,60 @@ test('YouTube and Facebook coverage videos play on the event page; other links s
   const page = renderEvent({ events: [album], forms: [] }, 'fair');
   assert.ok(!page.includes('<iframe') && page.includes('View event coverage'));
 });
+
+test('coverage posts bring their photos and video; editors can hide either', async () => {
+  const { fetchPostMedia } = await import('../../js/lib/facebook.js');
+  const media = await fetchPostMedia({ token: 't' }, '104_938', {
+    fetchImpl: async (url, options) => {
+      assert.ok(!url.includes('t&') && options.headers.Authorization === 'Bearer t');
+      return {
+        ok: true,
+        json: async () => ({
+          attachments: {
+            data: [
+              {
+                type: 'album',
+                subattachments: {
+                  data: [
+                    { type: 'photo', media: { image: { src: 'https://scontent.example/1.jpg' } } },
+                    { type: 'photo', media: { image: { src: 'https://scontent.example/2.jpg' } } },
+                    {
+                      type: 'video',
+                      url: 'https://www.facebook.com/acs.gstu/videos/555/',
+                      media: { image: { src: 'https://scontent.example/v.jpg' } },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        }),
+      };
+    },
+  });
+  assert.deepEqual(media, {
+    photos: ['https://scontent.example/1.jpg', 'https://scontent.example/2.jpg'],
+    video: 'https://www.facebook.com/acs.gstu/videos/555/',
+  });
+
+  const base = {
+    id: 'fair',
+    title: 'Fair',
+    date: '2026-01-02',
+    category: 'outreach',
+    description: 'Fun.',
+    sourceUrl: 'https://www.facebook.com/acs.gstu/posts/1',
+  };
+  const photos = Array.from({ length: 11 }, (_, i) => `media/coverage/fair/${i + 1}.jpg`);
+  const e = normalizeEvent({ ...base, photos: [...photos, '../secret.jpg', 'https://evil.example/x.jpg'] });
+  assert.equal(e.photos.length, 11, 'only photos saved by the build are kept');
+  const page = renderEvent({ events: [e], forms: [] }, 'fair');
+  assert.ok(page.includes('<h2>Event photos</h2>') && page.includes('11 photos'));
+  assert.equal(page.match(/class="event-photo"/g).length, 11, 'every photo is in the album');
+  assert.equal(page.match(/data-gallery-index="\d+" hidden/g).length, 3, 'the grid shows eight');
+  assert.ok(page.includes('<span class="event-photo-more">+3</span>'));
+  for (const [tag] of page.matchAll(/<img\b[^>]+>/g)) assert.ok(tag.includes('width=') && tag.includes('height='), tag);
+  const hidden = normalizeEvent({ ...base, photos, showPhotos: false });
+  assert.equal(hidden.hidePhotos, true);
+  assert.ok(!renderEvent({ events: [hidden], forms: [] }, 'fair').includes('Event photos'));
+});

@@ -161,6 +161,22 @@ function eventVideo(e) {
   return `<section class="event-video" aria-label="Event video"><h2>Watch the event</h2><div class="event-video-frame"><iframe src="${h(src)}" title="${h(e.title)}: event video" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div></section>`;
 }
 
+// Photos of the coverage post: a grid of equal tiles (first 8, the last one says how many more);
+// any tile opens the whole album (js/public/gallery.js), or the photo itself without JavaScript.
+const GRID_PHOTOS = 8;
+function eventPhotos(e) {
+  if (e.hidePhotos || !e.photos?.length) return '';
+  const more = e.photos.length - GRID_PHOTOS;
+  const tiles = e.photos
+    .map((src, i) => {
+      const hidden = i >= GRID_PHOTOS ? ' hidden' : '';
+      const badge = i === GRID_PHOTOS - 1 && more > 0 ? `<span class="event-photo-more">+${more}</span>` : '';
+      return `<a class="event-photo" href="${h(src)}" data-gallery-index="${i}"${hidden}><img src="${h(src)}" alt="${h(e.title)}: photo ${i + 1} of ${e.photos.length}" width="800" height="600" loading="lazy" decoding="async">${badge}</a>`;
+    })
+    .join('');
+  return `<section class="event-photos" aria-label="Event photos" data-gallery><div class="event-photos-head"><h2>Event photos</h2><span>${e.photos.length} ${e.photos.length === 1 ? 'photo' : 'photos'}</span></div><div class="event-photo-grid">${tiles}</div></section>`;
+}
+
 export function renderEvent(data, id, { now = new Date(), inlineCalendar = false } = {}) {
   const e = data.events.find((item) => item.id === id);
   if (!e)
@@ -195,7 +211,7 @@ export function renderEvent(data, id, { now = new Date(), inlineCalendar = false
     ? `<a class="button secondary" href="data:text/calendar;charset=utf-8,${h(encodeURIComponent(calendarICS(e)))}" download="${e.id}.ics">Download calendar (.ics)</a>`
     : `<a class="button secondary" href="calendar/${e.id}.ics" download>Download calendar (.ics)</a>`;
   const year = e.date.slice(0, 4);
-  return `<article class="event-detail"><a class="back-link" href="${eventsHref(year, e.category)}">← Back to ${categories[e.category].toLowerCase()} events</a><p class="eyebrow">${categories[e.category]} / ${eventDateLabel(e)}</p><h1>${h(e.title)}</h1><div class="detail-grid">${photo(e.image, e.title, 'detail-image')}<div><h2>About the event</h2><p>${linkNames(h(e.description))}</p><dl><dt>Date</dt><dd><time datetime="${e.date}">${eventDateLabel(e)}</time></dd>${times}<dt>Location</dt><dd>${h(e.location || 'Location not published.')}</dd><dt>Organized by</dt><dd>ACS Student Chapter, GSTU</dd></dl>${registration}<div class="event-actions">${survey}<a class="button secondary" href="${h(googleCalendarURL(e))}" target="_blank" rel="noopener noreferrer">Google Calendar ↗</a>${ics}</div>${e.sourceUrl ? `<a href="${h(e.sourceUrl)}" target="_blank" rel="noopener noreferrer">View event coverage ↗</a>` : ''}</div></div>${eventVideo(e)}</article>`;
+  return `<article class="event-detail"><a class="back-link" href="${eventsHref(year, e.category)}">← Back to ${categories[e.category].toLowerCase()} events</a><p class="eyebrow">${categories[e.category]} / ${eventDateLabel(e)}</p><h1>${h(e.title)}</h1><div class="detail-grid">${photo(e.image, e.title, 'detail-image')}<div><h2>About the event</h2><p>${linkNames(h(e.description))}</p><dl><dt>Date</dt><dd><time datetime="${e.date}">${eventDateLabel(e)}</time></dd>${times}<dt>Location</dt><dd>${h(e.location || 'Location not published.')}</dd><dt>Organized by</dt><dd>ACS Student Chapter, GSTU</dd></dl>${registration}<div class="event-actions">${survey}<a class="button secondary" href="${h(googleCalendarURL(e))}" target="_blank" rel="noopener noreferrer">Google Calendar ↗</a>${ics}</div>${e.sourceUrl ? `<a href="${h(e.sourceUrl)}" target="_blank" rel="noopener noreferrer">View event coverage ↗</a>` : ''}</div></div>${eventVideo(e)}${eventPhotos(e)}</article>`;
 }
 
 function members(list, cls = '', showRoles = true) {

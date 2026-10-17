@@ -90,8 +90,14 @@ export function normalizeEvent(raw) {
     sourceUrl: safeURL(raw.sourceUrl),
     // The editor's "Show the video" box; stored only when the video is hidden.
     hideVideo: raw.showVideo === false || raw.hideVideo === true,
-    // Set by the build: the real address behind a Facebook share link (never stored).
+    // The editor's "Show the photos" box; stored only when the photos are hidden.
+    hidePhotos: raw.showPhotos === false || raw.hidePhotos === true,
+    // Set by the build (never stored): the real video address behind a Facebook link, and the
+    // photos of the coverage post saved with the site.
     videoUrl: safeURL(raw.videoUrl),
+    photos: (Array.isArray(raw.photos) ? raw.photos : [])
+      .filter((p) => typeof p === 'string' && /^media\/coverage\/[a-z0-9-]+\/\d{1,3}\.(jpg|png|webp)$/.test(p))
+      .slice(0, 40),
     startsAt: text(raw.startsAt, 35),
     endsAt: text(raw.endsAt, 35),
   };
@@ -150,6 +156,7 @@ export function eventFormValues(e) {
   return {
     ...e,
     showVideo: !e.hideVideo,
+    showPhotos: !e.hidePhotos,
     endDate: timed ? (end.date !== e.date ? end.date : '') : e.endsAt && e.endsAt !== e.date ? e.endsAt : '',
     startTime: timed ? local(e.startsAt).time : '',
     endTime: timed ? end.time : '',

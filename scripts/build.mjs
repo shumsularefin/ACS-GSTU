@@ -33,7 +33,7 @@ import {
   renderNewsHighlights,
 } from '../js/lib/content-render.js';
 import { firestoreREST } from '../js/lib/firestore-rest.js';
-import { facebookConfig, fetchPagePosts, postsSignature } from '../js/lib/facebook.js';
+import { facebookConfig, fetchPagePosts, fetchPostMedia, postsSignature } from '../js/lib/facebook.js';
 import { loadPublished } from '../js/lib/content-store.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -86,7 +86,10 @@ const publicRoot = path.resolve('public');
 if (path.dirname(publicRoot) !== root || path.basename(publicRoot) !== 'public') throw Error('Unexpected output directory');
 fs.rmSync(publicRoot, { recursive: true, force: true });
 for (const dir of ['css', 'js', 'data', 'calendar', 'media', 'media/news']) fs.mkdirSync(path.join(publicRoot, dir), { recursive: true });
-const write = (file, body) => fs.writeFileSync(path.join(publicRoot, file), body);
+const write = (file, body) => {
+  fs.mkdirSync(path.dirname(path.join(publicRoot, file)), { recursive: true });
+  fs.writeFileSync(path.join(publicRoot, file), body);
+};
 
 // Uploaded images are baked into the site so visitors do not spend database reads on them.
 const media = {};
@@ -108,17 +111,17 @@ for (const reference of references) {
 // unreachable, the News already on the live site is kept.
 const LIVE = 'https://acs-gstu.web.app/';
 const imageTypes = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
-async function savePicture(id, url) {
+async function savePicture(id, url, folder = 'media/news') {
   try {
     const response = await fetch(url);
     const ext = imageTypes[(response.headers.get('content-type') || '').split(';')[0].trim()];
     if (!response.ok || !ext) throw Error(`status ${response.status}`);
     const body = Buffer.from(await response.arrayBuffer());
     if (body.length > 8 * 1024 * 1024) throw Error('too large');
-    write(`media/news/${id}.${ext}`, body);
-    return `media/news/${id}.${ext}`;
+    write(`${folder}/${id}.${ext}`, body);
+    return `${folder}/${id}.${ext}`;
   } catch (error) {
-    warn(`Photo of post ${id} could not be saved (${error.message}).`);
+    warn(`Photo ${folder}/${id} could not be saved (${error.message}).`);
     return '';
   }
 }
@@ -165,24 +168,81 @@ async function loadNews() {
     return { connected: false, signature: '', posts: [] };
   }
 }
-// Facebook share links (facebook.com/share/v/…) redirect to the real video address, which the
-// Facebook player needs. Resolve them once per build.
-for (const e of data.events)
-  if (/^https:\/\/(www\.|m\.)?facebook\.com\/share\/(v|r)\//.test(e.sourceUrl))
-    try {
-      const response = await fetch(e.sourceUrl, { redirect: 'manual', headers: { 'User-Agent': 'Mozilla/5.0' } });
-      const target = new URL(response.headers.get('location') || '', e.sourceUrl);
-      if (/^(www\.)?facebook\.com$/.test(target.hostname) && /^\/(reel|watch|[^/]+\/videos)\b/.test(target.pathname))
-        e.videoUrl = target.pathname.startsWith('/watch')
-          ? `https://www.facebook.com/watch/?v=${target.searchParams.get('v')}`
-          : `https://www.facebook.com${target.pathname}`;
-    } catch (error) {
-      warn(`Video link of ${e.id} could not be resolved (${error.message}).`);
-    }
-
 const newsFeed = await loadNews();
 data.news = newsFeed.posts;
 write('data/news.json', JSON.stringify(newsFeed));
+
+// Event coverage on Facebook. Share links (facebook.com/share/v/…) redirect to the real video
+// address, which the Facebook player needs. Posts (share/p/…, /posts/…) are read through the
+// Graph API for their photos (saved with the site, since Facebook photo links expire) and video;
+// without the token, the post's preview image is used. Resolved once per build.
+const FB_POST = /^https:\/\/(www\.|m\.|web\.)?facebook\.com\/(share\/p\/|[^/]+\/posts\/|permalink\.php|story\.php|photo)/;
+const graphPrefix = newsFeed.posts[0]?.id.split('_')[0] || (/^\d+$/.test(facebookConfig()?.pageId || '') ? facebookConfig().pageId : '');
+async function facebookPage(url) {
+  const response = await fetch(url, { headers: { 'User-Agent': 'facebookexternalhit/1.1' } });
+  const html = await response.text();
+  const meta = (name) => html.match(new RegExp(`<meta[^>]+property="${name}"[^>]+content="([^"]*)"`))?.[1]?.replace(/&amp;/g, '&') || '';
+  return { url: meta('og:url') || response.url, image: meta('og:image') };
+}
+const postNumber = (link) => {
+  try {
+    const url = new URL(link);
+    return url.searchParams.get('story_fbid')?.match(/^\d+$/)?.[0] || url.searchParams.get('fbid')?.match(/^\d+$/)?.[0] || url.pathname.match(/\/(\d{6,})\/?$/)?.[1] || '';
+  } catch {
+    return '';
+  }
+};
+const facebookVideoURL = (target) =>
+  target.pathname.startsWith('/watch') ? `https://www.facebook.com/watch/?v=${target.searchParams.get('v')}` : `https://www.facebook.com${target.pathname}`;
+for (const e of data.events) {
+  if (source === 'seed' || !e.sourceUrl) continue;
+  if (/^https:\/\/(www\.|m\.)?facebook\.com\/share\/(v|r)\//.test(e.sourceUrl)) {
+    try {
+      const response = await fetch(e.sourceUrl, { redirect: 'manual', headers: { 'User-Agent': 'Mozilla/5.0' } });
+      const target = new URL(response.headers.get('location') || '', e.sourceUrl);
+      if (/^(www\.)?facebook\.com$/.test(target.hostname) && /^\/(reel|watch|[^/]+\/videos)/.test(target.pathname)) e.videoUrl = facebookVideoURL(target);
+    } catch (error) {
+      warn(`Video link of ${e.id} could not be resolved (${error.message}).`);
+    }
+    continue;
+  }
+  if (!FB_POST.test(e.sourceUrl)) continue;
+  try {
+    let number = postNumber(e.sourceUrl);
+    let preview = '';
+    if (!number) {
+      const page = await facebookPage(e.sourceUrl);
+      number = postNumber(page.url);
+      preview = page.image;
+    }
+    let found = { photos: [], video: '' };
+    const facebook = facebookConfig();
+    if (facebook && number && graphPrefix)
+      try {
+        found = await fetchPostMedia(facebook, `${graphPrefix}_${number}`);
+      } catch (error) {
+        warn(`Coverage post of ${e.id} could not be read from Facebook (${error.message}).`);
+      }
+    if (!found.photos.length && !found.video) {
+      if (!preview && number) preview = (await facebookPage(e.sourceUrl)).image;
+      if (/^https:\/\//.test(preview)) found.photos = [preview];
+    }
+    if (found.video)
+      try {
+        const target = new URL(found.video);
+        if (/^\/(reel|watch|[^/]+\/videos)/.test(target.pathname)) e.videoUrl = facebookVideoURL(target);
+      } catch {}
+    const photos = [];
+    for (const [i, url] of found.photos.entries()) {
+      const saved = await savePicture(String(i + 1), url, `media/coverage/${e.id}`);
+      if (saved) photos.push(saved);
+    }
+    e.photos = photos;
+    console.log(`Coverage of ${e.id}: ${photos.length} photo(s)${e.videoUrl ? ' and a video' : ''}.`);
+  } catch (error) {
+    warn(`Coverage of ${e.id} could not be read (${error.message}).`);
+  }
+}
 
 const images = json('data/image-manifest.json');
 configureRender({ manifest: images, media, events: data.events.map((e) => e.id) });

@@ -98,8 +98,14 @@ export function setupLiveContent() {
     if (needsQuery) for (const root of roots) await paint(root, data, new URL(location.href));
     const latest = await freshContent();
     if (!latest) return;
-    // Facebook posts come with the build; the database only says which ones are hidden.
-    const fresh = { ...latest, news: baked.news };
+    // Facebook posts, coverage photos and resolved video links come with the build; the database
+    // only holds what editors set. Keep the baked extras while the coverage link is unchanged.
+    const bakedEvents = new Map(baked.events.map((e) => [e.id, e]));
+    const events = latest.events.map((e) => {
+      const b = bakedEvents.get(e.id);
+      return b && b.sourceUrl === e.sourceUrl ? { ...e, videoUrl: b.videoUrl, photos: b.photos } : e;
+    });
+    const fresh = { ...latest, events, news: baked.news };
     data = fresh;
     window.dispatchEvent(new CustomEvent('chapter-content', { detail: fresh }));
     if (!interacted) {

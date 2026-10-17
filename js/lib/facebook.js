@@ -47,3 +47,35 @@ export const postsSignature = (posts) =>
     .update(JSON.stringify(posts.map((p) => [p.id, p.text, p.createdAt])))
     .digest('hex')
     .slice(0, 16);
+
+const MEDIA_FIELDS = 'attachments{type,url,media,target,subattachments.limit(100){type,url,media,target}}';
+
+/**
+ * The photos and video of one Page post (event coverage), as { photos: [url], video: url }.
+ * `postId` is the full Graph ID (pageId_postNumber).
+ */
+export async function fetchPostMedia({ token, version = '' }, postId, { fetchImpl = fetch, maxPhotos = 40 } = {}) {
+  if (!/^[0-9]{3,40}_[0-9]{3,40}$/.test(postId)) throw Error('Invalid post ID.');
+  const url = `https://graph.facebook.com/${version ? `${version}/` : ''}${postId}?fields=${encodeURIComponent(MEDIA_FIELDS)}`;
+  const response = await fetchImpl(url, { headers: { Authorization: `Bearer ${token}` } });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw Error(`Facebook refused the request (${response.status}): ${body.error?.message || 'no details'}`);
+  const photos = [];
+  let video = '';
+  const visit = (a) => {
+    const type = String(a.type || '');
+    const link = String(a.target?.url || a.url || '');
+    if (type.includes('video')) {
+      if (!video && /^https:\/\/(www\.)?facebook\.com\//.test(link)) video = link;
+      return;
+    }
+    const src = a.media?.image?.src;
+    if (/^https:\/\//.test(src || '') && !photos.includes(src)) photos.push(src);
+  };
+  for (const a of body.attachments?.data || []) {
+    const subs = a.subattachments?.data || [];
+    if (subs.length) subs.forEach(visit);
+    else visit(a);
+  }
+  return { photos: photos.slice(0, maxPhotos), video };
+}

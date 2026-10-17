@@ -109,7 +109,7 @@ service cloud.firestore {
     function shortText(v, max) { return v is string && v.size() <= max; }
     function eventFields(e, id) {
       return e.keys().hasOnly(['id', 'title', 'date', 'category', 'image', 'description', 'location', 'registrationUrl',
-             'registrationStatus', 'registrationFormId', 'surveyFormId', 'sourceUrl', 'hideVideo', 'startsAt', 'endsAt', 'createdBy', 'revision',
+             'registrationStatus', 'registrationFormId', 'surveyFormId', 'sourceUrl', 'hideVideo', 'hidePhotos', 'startsAt', 'endsAt', 'createdBy', 'revision',
              'updatedAt', 'updatedBy', 'auditId'])
         && e.id == id && id.matches('^[a-z0-9]+(-[a-z0-9]+)*$') && id.size() <= 80
         && e.title is string && e.title.size() > 0 && e.title.size() <= 200
@@ -121,6 +121,7 @@ service cloud.firestore {
         && shortText(e.sourceUrl, 2000) && shortText(e.startsAt, 35) && shortText(e.endsAt, 35)
         && shortText(e.get('registrationFormId', ''), 80) && shortText(e.get('surveyFormId', ''), 80)
         && e.get('hideVideo', false) is bool
+        && e.get('hidePhotos', false) is bool
         && e.createdBy is string;
     }
 

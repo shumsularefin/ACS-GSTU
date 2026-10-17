@@ -509,3 +509,27 @@ fieldset.pf-q > legend.pf-label + * { clear: both; }
 .event-video h2 { margin: 0 0 16px; font-size: clamp(24px, 3vw, 32px); font-weight: 500; }
 .event-video-frame { position: relative; aspect-ratio: 16 / 9; border-radius: var(--radius); overflow: hidden; background: var(--ink); }
 .event-video-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+/* Event photos: equal 4:3 tiles whatever the original shape; the album opens full screen. */
+.event-photos { margin-top: clamp(32px, 5vw, 56px); }
+.event-photos-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.event-photos-head h2 { margin: 0; font-size: clamp(24px, 3vw, 32px); font-weight: 500; }
+.event-photos-head span { color: var(--muted, #666); font-size: 15px; }
+.event-photo-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.event-photo { position: relative; display: block; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; background: #e9e9f1; }
+.event-photo[hidden] { display: none; }
+.event-photo img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .3s ease; }
+.event-photo:hover img, .event-photo:focus-visible img { transform: scale(1.04); }
+.event-photo-more { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(15, 15, 30, .55); color: #fff; font-size: clamp(22px, 3vw, 32px); font-weight: 500; }
+@media (max-width: 800px) { .event-photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } }
+.gallery { width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: rgba(8, 8, 16, .94); color: #fff; }
+.gallery[open] { display: grid; grid-template-columns: 64px minmax(0, 1fr) 64px; align-items: center; }
+.gallery::backdrop { background: rgba(8, 8, 16, .94); }
+.gallery figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.gallery img { max-width: 100%; max-height: calc(100dvh - 96px); object-fit: contain; border-radius: 8px; }
+.gallery figcaption { font-size: 14px; opacity: .8; }
+.gallery button { border: 0; background: rgba(255, 255, 255, .12); color: #fff; width: 48px; height: 48px; border-radius: 50%; font-size: 30px; line-height: 1; cursor: pointer; justify-self: center; }
+.gallery button:hover, .gallery button:focus-visible { background: rgba(255, 255, 255, .25); }
+.gallery .gallery-close { position: absolute; top: 16px; right: 16px; }
+.gallery-single .gallery-prev, .gallery-single .gallery-next { visibility: hidden; }
+@media (max-width: 600px) { .gallery[open] { grid-template-columns: 0 minmax(0, 1fr) 0; } .gallery .gallery-prev, .gallery .gallery-next { position: absolute; bottom: 20px; } .gallery .gallery-prev { left: 20px; } .gallery .gallery-next { right: 20px; } }
