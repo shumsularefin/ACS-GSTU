@@ -95,7 +95,7 @@ function pagination(items, selected, url, label) {
   const links = items
     .map(
       (item) =>
-        `<a href="${url(item)}"${item === selected ? ' aria-current="page"' : ''}>${item === 'founders' ? 'Founding members' : item}</a>`,
+        `<a href="${url(item)}"${item === selected ? ' aria-current="page"' : ''}>${item === 'founders' ? 'Founding members' : item === 'all' ? 'All years' : item}</a>`,
     )
     .join('');
   return `<nav class="year-pagination" aria-label="${label}">${previous}${links}${next}</nav>`;
@@ -106,10 +106,11 @@ export function eventYears(data, extra) {
 }
 
 export function renderEvents(data, options = {}) {
-  const year = Number(/^20\d{2}$/.test(String(options.year)) ? options.year : latestYear(data));
+  // 'all' lists every year's events together, newest first.
+  const year = options.year === 'all' ? 'all' : Number(/^20\d{2}$/.test(String(options.year)) ? options.year : latestYear(data));
   const type = Object.hasOwn(categories, options.type) ? options.type : 'all';
   const selected = data.events
-    .filter((e) => Number(e.date.slice(0, 4)) === year && (type === 'all' || e.category === type))
+    .filter((e) => (year === 'all' || Number(e.date.slice(0, 4)) === year) && (type === 'all' || e.category === type))
     .sort((a, b) => b.date.localeCompare(a.date));
   const tabs = Object.entries(categories)
     .map(([key, label]) => `<a href="${eventsHref(year, key)}"${key === type ? ' aria-current="page"' : ''}>${label}</a>`)
@@ -122,8 +123,8 @@ export function renderEvents(data, options = {}) {
     .join('');
   const results = selected.length
     ? `<div class="event-grid">${cards}</div>`
-    : '<div class="empty-state"><h2>Events will be added soon</h2><p>No events have been published in this category for this year.</p><a href="activities.html">View all events →</a></div>';
-  return `<section class="archive" data-year="${year}" data-type="${type}"><div class="archive-heading"><h6>OUR WORKS AND ACTIVITIES</h6><h1 data-text="ACTIVITY">Our Events</h1></div><nav class="category-tabs" aria-label="Event categories">${tabs}</nav><div class="archive-meta"><h2>${year} <span>/ ${categories[type]}</span></h2><span>${selected.length} ${selected.length === 1 ? 'event' : 'events'}</span></div>${results}${pagination(eventYears(data, year), year, (y) => eventsHref(y, type), 'Event years')}</section>`;
+    : `<div class="empty-state"><h2>Events will be added soon</h2><p>No events have been published in this category${year === 'all' ? '' : ' for this year'}.</p><a href="${eventsHref('all')}">View all events →</a></div>`;
+  return `<section class="archive" data-year="${year}" data-type="${type}"><div class="archive-heading"><h6>OUR WORKS AND ACTIVITIES</h6><h1 data-text="ACTIVITY">Our Events</h1></div><nav class="category-tabs" aria-label="Event categories">${tabs}</nav><div class="archive-meta"><h2>${year === 'all' ? 'All years' : year} <span>/ ${categories[type]}</span></h2><span>${selected.length} ${selected.length === 1 ? 'event' : 'events'}</span></div>${results}${pagination(['all', ...eventYears(data, year === 'all' ? undefined : year)], year, (y) => eventsHref(y, type), 'Event years')}</section>`;
 }
 
 /**
