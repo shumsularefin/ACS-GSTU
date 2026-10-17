@@ -5,10 +5,59 @@ import { categories, currentCategory, todayInBangladesh, validDate } from './con
 
 export const SECTIONS = ['service', 'professional-development', 'chapter-development', 'green-chemistry'];
 export const CHAPTER = 'Gopalganj Science and Technology University Student Chapter';
-export const ADVISORS = [
-  { role: 'Chapter Faculty Advisor', name: 'Md. Kamruzzaman' },
-  { role: 'Chapter Faculty Co-Advisor', name: 'S. M. Fazle Rabbi' },
-];
+
+/** Self-assessment questions of the ACS Student Chapters submission, by section (from the 2025–2026 report). */
+export function selfAssessment(label = 'this') {
+  return [
+    {
+      section: 'Self-Assessment',
+      questions: [
+        `Describe two broad goals that your Student Chapter had for the ${label} academic year. Describe how you accomplished them. If you did not accomplish them, what were the barriers to achieving these goals?`,
+        'Describe an activity that best exemplifies your Student Chapter’s strengths and how you used available resources to accomplish that activity.',
+        'What are one or two goals your Student Chapter has for next year and, using the SMART goals strategy, how do you plan to accomplish them?',
+      ],
+    },
+    {
+      section: 'Service',
+      questions: [
+        'Describe how your group’s outreach and service efforts align with your student chapter’s strengths and/or goals.',
+        'How did your service activities encourage the audience towards a passion for safe and ethical science and chemistry?',
+        'When necessary, how did you assess chemical safety needs for the outreach activities you performed?',
+      ],
+    },
+    {
+      section: 'Professional Development',
+      questions: [
+        'What area of professional development was most important to your Student Chapter and why? Describe one event you held that impacted your growth in this area.',
+      ],
+    },
+    {
+      section: 'Chapter Development',
+      questions: [
+        'In what ways has your student chapter made the experiences better for members and students at your institution, and what types of events have been the most influential in accomplishing this?',
+        'How did your student chapter ensure an inclusive environment where attendees had a sense of belonging?',
+        'Did your student chapter have opportunities to work with any other ACS groups (local sections, international chemical sciences chapters, or other student communities)? If so, describe your engagement.',
+        'What succession planning have you put in place to make sure that your student chapter will continue to be active for years to come?',
+      ],
+    },
+    {
+      section: 'Finances',
+      questions: [
+        'Is your uploaded financial report in USD? Please answer Yes or No only. If No, what currency are you using?',
+        'Is your student chapter able to fundraise (sell food, t-shirts, lab books, goggles, or other items)? Please answer Yes or No only.',
+        'Is your student chapter able to apply for grants (from ACS or other organizations)? Please answer Yes or No only.',
+        'How does your student chapter use fundraising and budget management to develop professional skills?',
+        'What sources of funding did your student chapter utilize to accomplish its goals for the year? Is this a sustainable model to follow in future years? If so, why? If not, how might you work to develop a solid financial plan moving forward?',
+      ],
+    },
+    {
+      section: 'Green Chemistry',
+      questions: [
+        'If you wish to be considered for a Green Chemistry Student Chapter Award, please provide the following: a detailed summary of at least 3 events and explain why each event qualifies as an example of green chemistry, and one or more of the 12 principles of green chemistry that directly relate to each activity.',
+      ],
+    },
+  ];
+}
 
 // ------------------------------------------------------------------ fiscal years
 
@@ -109,7 +158,7 @@ const REPLACE = { '−': '-', '‐': '-', '‑': '-', ' ': ' ', ' ': ' ', '�
 
 /**
  * Draws the report as an A4 PDF and returns its bytes.
- * `lib` is pdf-lib; `details` = { chapter, officers: [{role, name}], advisors, preparedBy, generatedOn, logo (PNG bytes) }.
+ * `lib` is pdf-lib; `details` = { chapter, due, generatedOn, logo (PNG bytes) }.
  */
 export async function reportPDF(lib, report, details = {}) {
   const { PDFDocument, StandardFonts, rgb } = lib;
@@ -229,7 +278,6 @@ export async function reportPDF(lib, report, details = {}) {
     ['Submission deadline:', details.due || report.end],
     ['Events reported:', String(report.total)],
   ];
-  if (details.preparedBy) facts.push(['Prepared by:', details.preparedBy]);
   for (const [k, v] of facts) {
     const lines = wrap(v, fonts.regular, 11.5, inner - 190);
     text(k, MARGIN.x + 10, 11.5, fonts.bold);
@@ -238,75 +286,6 @@ export async function reportPDF(lib, report, details = {}) {
       if (i < lines.length - 1) y -= 14;
     });
     y -= 20;
-  }
-  y -= 10;
-
-  // ---------------------------------------------------------------- chapter information
-  const officers = (details.officers || []).filter((o) => o.name);
-  const advisors = details.advisors || ADVISORS;
-  const half = inner / 2;
-  const rowsHeight = (list) =>
-    list.reduce((sum, o) => sum + Math.max(wrap(o.role, fonts.regular, 8.5, half * 0.48 - 8).length, 1) * 10.5 + 4, 0);
-  const boxHeight = 22 + 18 + Math.max(rowsHeight(officers.length ? officers : [{ role: 'x' }]), rowsHeight(advisors)) + 10;
-  ensure(boxHeight);
-  const top = y;
-  rect(MARGIN.x, top, inner, boxHeight, null, RULE);
-  rect(MARGIN.x, top, inner, 20, SOFT, RULE);
-  page.drawLine({
-    start: { x: MARGIN.x + half, y: top - 20 },
-    end: { x: MARGIN.x + half, y: top - boxHeight },
-    thickness: 0.75,
-    color: color(RULE),
-  });
-  y = top - 14;
-  text('Chapter Information', MARGIN.x + 5, 10.5, fonts.bold);
-  const people = (list, x, heading, empty) => {
-    y = top - 36;
-    text(heading, x, 9.5, fonts.bold);
-    y -= 15;
-    if (!list.length) return text(empty, x, 8.5, fonts.italic, MUTED);
-    for (const o of list) {
-      const roles = wrap(o.role, fonts.regular, 8.5, half * 0.48 - 8);
-      const start = y;
-      roles.forEach((r, i) => {
-        text(r, x, 8.5);
-        if (i < roles.length - 1) y -= 10.5;
-      });
-      const after = y;
-      y = start;
-      text(wrap(o.name, fonts.regular, 8.5, half * 0.5 - 8)[0], x + half * 0.48, 8.5);
-      y = after - 14.5;
-    }
-  };
-  people(officers, MARGIN.x + 5, 'Chapter Officers', 'Officers were not added to this report.');
-  people(advisors, MARGIN.x + half + 5, 'Faculty Advisors', '');
-  y = top - boxHeight - 26;
-
-  // ---------------------------------------------------------------- activity summary
-  ensure(40 + SECTIONS.length * 17);
-  rect(MARGIN.x, y + 14, inner, 20, TINT);
-  text('Activity Summary', MARGIN.x + 5, 11.5, fonts.bold);
-  y -= 24;
-  const max = Math.max(1, ...report.sections.map((s) => s.events.length));
-  for (const s of report.sections) {
-    text(s.label, MARGIN.x + 5, 9.5);
-    const bar = ((inner - 230) * s.events.length) / max;
-    if (s.events.length) page.drawRectangle({ x: MARGIN.x + 170, y: y - 1, width: bar, height: 9, color: color(BLUE), opacity: 0.85 });
-    text(`${s.events.length} ${s.events.length === 1 ? 'event' : 'events'}`, MARGIN.x + 176 + bar, 9.5, fonts.regular, MUTED);
-    y -= 17;
-  }
-  const crossListed = report.sections
-    .find((s) => s.key === 'green-chemistry')
-    .events.filter((e) => e.category !== 'green-chemistry').length;
-  if (crossListed) {
-    text(
-      `Green Chemistry includes ${crossListed} event${crossListed === 1 ? '' : 's'} also reported in another section.`,
-      MARGIN.x + 5,
-      8.5,
-      fonts.italic,
-      MUTED,
-    );
-    y -= 14;
   }
   y -= 18;
 
@@ -384,6 +363,42 @@ export async function reportPDF(lib, report, details = {}) {
       y -= 22;
     }
     y -= 8;
+  }
+
+  // ---------------------------------------------------------------- self-assessment questions
+  // The questions of the ACS submission, for the executives to answer in the reporting portal.
+  newPage();
+  rect(MARGIN.x, y + 15, inner, 21, TINT);
+  text('Self-Assessment Questions', MARGIN.x + 5, 12.5, fonts.bold);
+  y -= 26;
+  for (const l of wrap(
+    `The ACS Student Chapters submission asks these questions. Prepare the answers for the ${report.label} report and enter them in the ACS reporting portal by ${details.due || report.end}.`,
+    fonts.italic,
+    9,
+    inner - 10,
+  )) {
+    text(l, MARGIN.x + 5, 9, fonts.italic, MUTED);
+    y -= 12;
+  }
+  y -= 12;
+  let number = 0;
+  for (const group of selfAssessment(report.label)) {
+    ensure(70);
+    rect(MARGIN.x, y + 12, inner, 17, SOFT);
+    text(group.section, MARGIN.x + 5, 10.5, fonts.bold);
+    y -= 22;
+    for (const question of group.questions) {
+      const mark = `${++number}.`;
+      const lines = wrap(question, fonts.regular, 9.5, inner - 34);
+      ensure(lines.length * 12.5 + 6);
+      text(mark, MARGIN.x + 5, 9.5, fonts.bold, BLUE);
+      for (const l of lines) {
+        text(l, MARGIN.x + 26, 9.5);
+        y -= 12.5;
+      }
+      y -= 5;
+    }
+    y -= 6;
   }
 
   // ---------------------------------------------------------------- footer on every page

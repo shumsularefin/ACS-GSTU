@@ -407,7 +407,6 @@
 .ed-report-controls { display: grid; gap: 6px; }
 .ed-report-controls .ed-field { margin: 0; }
 .ed-report-controls .ed-check { font-size: 13px; }
-.ed-report-officers .ed-details { margin-top: 4px; }
 @media (max-width: 760px) {
   .ed-report-counts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ed-report-events li { grid-template-columns: auto minmax(0, 1fr); }

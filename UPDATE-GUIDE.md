@@ -29,7 +29,7 @@ The ACS student chapter report is due on **31 May** each year and covers the fis
 
 1. **Annual reports → Fiscal year:** choose the year (the current one is selected, with the days left to the deadline). Events are included by their start date. **Adjust the reporting period** only if ACS asks for different dates.
 2. **Events in this report:** every event in the period, grouped into the four sections. Untick an event to leave it out, choose another section for this report only, or tick **Also list under Green Chemistry** to show it in both places, as the ACS form allows. Events held in May also fall in the previous year's period; leave them out if they were already reported.
-3. **Report details:** choose the executive committee whose officers are listed (faculty advisors are always included) and who prepared it, then **Download PDF report**. **Download Excel** gives the same events in a sheet for copying into the ACS reporting portal.
+3. **Download PDF report:** the events of the year by section, each with its date, location, category and description, followed by the **self-assessment questions** of the ACS report (goals, service, professional development, chapter development, finances and green chemistry) for the executives to answer in the ACS portal. **Download Excel** gives the same events in a sheet for copying into the portal.
 
 Your choices for each year are remembered in this browser. To change an event's title, date or description, edit the event and publish it; the report picks up the change.
 

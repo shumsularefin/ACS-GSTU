@@ -44,7 +44,7 @@ Rename the public entry point Certificate Center. Members can select an event an
 
 ## Annual reports
 
-Add an Annual reports section to the dashboard for every editor role. The ACS fiscal year runs from 1 May of the previous year to 31 May, the submission deadline (2025–2026 covers May 2025 through May 2026). The editor selects a fiscal year; the dashboard collects the published events whose start date falls in it, groups them by the four report categories, and downloads a PDF modelled on the ACS Student Chapters submission (chapter information, officers and faculty advisors, an activity summary, then each section's events with title, date, location, category and description). Editors can leave events out, use a different section for the report only, and also list events under Green Chemistry. An Excel copy of the event list is available for the ACS portal.
+Add an Annual reports section to the dashboard for every editor role. The ACS fiscal year runs from 1 May of the previous year to 31 May, the submission deadline (2025–2026 covers May 2025 through May 2026). The editor selects a fiscal year; the dashboard collects the published events whose start date falls in it, groups them by the four report categories, and downloads a PDF modelled on the ACS Student Chapters submission: each section's events with title, date, location, category and description, followed by the complete list of the report's self-assessment questions for the executives to answer. Editors can leave events out, use a different section for the report only, and also list events under Green Chemistry. An Excel copy of the event list is available for the ACS portal.
 
 ## Hosting, collaboration and handover
 

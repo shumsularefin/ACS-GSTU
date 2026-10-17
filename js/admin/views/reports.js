@@ -6,8 +6,6 @@ import { categories, todayInBangladesh } from '../../lib/content-model.js';
 import { dateLabel, eventDateLabel } from '../../lib/content-render.js';
 import { loadPdfLib } from '../../lib/certificate-render.js';
 import {
-  ADVISORS,
-  CHAPTER,
   SECTIONS,
   buildReport,
   currentReportYear,
@@ -20,7 +18,7 @@ import {
   reportRows,
 } from '../../lib/annual-report.js';
 
-// Choices for each report (left-out events, sections, cross-listing, details) are remembered in this
+// Choices for each report (period, left-out events, sections, cross-listing) are remembered in this
 // browser so an editor can come back to a report; the events themselves always come from the website.
 const STORE = 'acs-annual-report:';
 const remembered = (id) => {
@@ -65,16 +63,7 @@ export const reportsView = {
       excluded: saved.excluded || [],
       category: saved.category || {},
       green: saved.green || [],
-      committee: saved.committee,
-      preparedBy: saved.preparedBy ?? (app.user.displayName || ''),
-      chapter: saved.chapter || CHAPTER,
     };
-    const committees = Object.keys(app.data.team || {})
-      .filter((k) => /^20\d{2}$/.test(k) && app.data.team[k].value.members.length)
-      .sort()
-      .reverse();
-    if (state.committee === undefined)
-      state.committee = [String(fy.endYear - 1), String(fy.endYear)].find((y) => committees.includes(y)) || '';
     const save = () => remember(fy.id, state);
     const unpublished = app.drafts.names().filter((n) => n.startsWith('event:')).length;
 
@@ -112,26 +101,15 @@ export const reportsView = {
       </section>
 
       <section class="ed-card">
-        <div class="ed-card-head"><h3><span class="ed-step-num">3</span>Report details</h3></div>
-        <form class="ed-form" novalidate data-details><div class="ed-grid">
-          <label class="ed-field"><span class="ed-label">Chapter officers</span><select name="committee" data-ignore>
-            <option value="">Don’t list officers</option>
-            ${committees.map((y) => `<option value="${y}"${y === state.committee ? ' selected' : ''}>Executive committee ${y}</option>`).join('')}
-          </select><small>From Team &amp; rosters. Faculty advisors are always listed.</small></label>
-          <label class="ed-field"><span class="ed-label">Prepared by <em>(optional)</em></span><input name="preparedBy" maxlength="120" value="${h(state.preparedBy)}" data-ignore></label>
-          <label class="ed-field ed-wide"><span class="ed-label">Chapter name</span><input name="chapter" maxlength="200" value="${h(state.chapter)}" data-ignore></label>
-        </div></form>
-        <div class="ed-report-officers" data-officers></div>
+        <div class="ed-card-head"><h3><span class="ed-step-num">3</span>Download</h3></div>
         <p class="ed-form-error" role="alert" hidden></p>
         <div class="ed-actions ed-form-actions">
           <button type="button" class="ed-btn" data-excel>Download Excel</button>
           <button type="button" class="ed-btn ed-btn-primary" data-pdf>Download PDF report</button>
         </div>
-        <p class="ed-muted">The PDF follows the ACS submission layout: chapter information, an activity summary, then each section’s events with their date, location, category and description. The Excel file lists the same events for copying into the ACS reporting portal.</p>
+        <p class="ed-muted">The PDF lists the events by section, in the ACS submission layout, with each event’s date, location, category and description. It ends with the self-assessment questions of the ACS report for the executives to answer. The Excel file lists the same events for copying into the ACS reporting portal.</p>
       </section>`;
 
-    const officers = () =>
-      state.committee ? (app.data.team[state.committee]?.value.members || []).map((m) => ({ role: m.role, name: m.name })) : [];
     const report = () => buildReport(events, { start: state.start, end: state.end, label: fy.label, choices: state });
 
     // ------------------------------------------------------------ step 2: events
@@ -181,17 +159,7 @@ export const reportsView = {
         <div class="ed-actions"><button type="button" class="ed-btn ed-btn-quiet ed-btn-small" data-include-all>Include all</button><button type="button" class="ed-btn ed-btn-quiet ed-btn-small" data-reset-choices>Use the website categories</button></div>`;
     };
 
-    const drawOfficers = () => {
-      const list = officers();
-      $('[data-officers]', root).innerHTML = `<dl class="ed-details">${
-        list.length
-          ? list.map((o) => `<dt>${h(o.role)}</dt><dd>${h(o.name)}</dd>`).join('')
-          : '<dt>Chapter officers</dt><dd>Not listed</dd>'
-      }${ADVISORS.map((a) => `<dt>${h(a.role)}</dt><dd>${h(a.name)}</dd>`).join('')}</dl>`;
-    };
-
     drawEvents();
-    drawOfficers();
 
     root.addEventListener('change', (e) => {
       const t = e.target;
@@ -203,15 +171,6 @@ export const reportsView = {
         state[t.name] = t.value;
         save();
         return drawEvents();
-      }
-      if (t.name === 'committee') {
-        state.committee = t.value;
-        save();
-        return drawOfficers();
-      }
-      if (t.name === 'preparedBy' || t.name === 'chapter') {
-        state[t.name] = t.value.trim();
-        return save();
       }
       const id = t.closest('[data-id]')?.dataset.id;
       if (!id) return;
@@ -228,12 +187,6 @@ export const reportsView = {
       // Keep keyboard focus on the same control after the list is redrawn.
       const control = Object.keys(t.dataset).find((k) => ['include', 'section', 'green'].includes(k));
       $(`[data-id="${CSS.escape(id)}"] [data-${control}]`, root)?.focus({ preventScroll: true });
-    });
-    root.addEventListener('input', (e) => {
-      if (e.target.name === 'preparedBy' || e.target.name === 'chapter') {
-        state[e.target.name] = e.target.value.trim();
-        save();
-      }
     });
     root.addEventListener('click', (e) => {
       if (e.target.closest('[data-reset-period]')) {
@@ -283,9 +236,6 @@ export const reportsView = {
         }
         const [lib, logo] = await Promise.all([loadPdfLib(), chapterLogo().catch(() => null)]);
         const bytes = await reportPDF(lib, r, {
-          chapter: state.chapter || CHAPTER,
-          officers: officers(),
-          preparedBy: state.preparedBy,
           generatedOn: dateLabel(todayInBangladesh()),
           due: fy.due,
           logo,

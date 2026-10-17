@@ -10,6 +10,7 @@ import {
   overlapsPrevious,
   reportPDF,
   reportRows,
+  selfAssessment,
 } from '../../js/lib/annual-report.js';
 
 const pdfLib = () => {
@@ -107,11 +108,24 @@ test('annual report: the PDF is drawn, long descriptions continue on new pages, 
     description: 'Word '.repeat(2500) + 'x'.repeat(400),
   };
   const report = buildReport([...events, long], fiscalYear(2026));
-  const bytes = await reportPDF(pdfLib(), report, {
-    officers: [{ role: 'Chapter President', name: 'Shumsul Arefin' }],
-    generatedOn: '17 October 2026',
-  });
+  const bytes = await reportPDF(pdfLib(), report, { generatedOn: '17 October 2026' });
   const pdf = await pdfLib().PDFDocument.load(bytes);
   assert.ok(pdf.getPageCount() >= 3);
   assert.equal(pdf.getTitle(), 'ACS Student Chapter Annual Report 2025-2026');
+});
+
+test('annual report: the self-assessment questions of the ACS submission, by section', () => {
+  const groups = selfAssessment('2025–2026');
+  assert.deepEqual(
+    groups.map((g) => [g.section, g.questions.length]),
+    [
+      ['Self-Assessment', 3],
+      ['Service', 3],
+      ['Professional Development', 1],
+      ['Chapter Development', 4],
+      ['Finances', 5],
+      ['Green Chemistry', 1],
+    ],
+  );
+  assert.match(groups[0].questions[0], /^Describe two broad goals .* the 2025–2026 academic year/);
 });
