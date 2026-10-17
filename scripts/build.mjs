@@ -194,16 +194,42 @@ const postNumber = (link) => {
 };
 const facebookVideoURL = (target) =>
   target.pathname.startsWith('/watch') ? `https://www.facebook.com/watch/?v=${target.searchParams.get('v')}` : `https://www.facebook.com${target.pathname}`;
+const coverageNotice = (message) => {
+  warn(message);
+  if (process.env.GITHUB_ACTIONS) console.log(`::warning title=Coverage::${message.replace(/\s+/g, ' ')}`);
+};
+const isVideoAddress = (target) => /^(www\.)?facebook\.com$/.test(target.hostname) && /^\/(reel|watch|[^/]+\/videos)\b/.test(target.pathname);
+// When Facebook does not answer, the coverage already on the live site is kept.
+const liveEvents = source === 'seed' ? new Map() : await fetch(LIVE + 'data/content.json', { cache: 'no-store' })
+  .then((r) => (r.ok ? r.json() : { events: [] }))
+  .then((live) => new Map((live.events || []).map((e) => [e.id, e])))
+  .catch(() => new Map());
+async function keepLiveCoverage(e) {
+  const live = liveEvents.get(e.id);
+  if (!live || live.sourceUrl !== e.sourceUrl) return;
+  if (!e.videoUrl && live.videoUrl) e.videoUrl = live.videoUrl;
+  if ((live.photos?.length || 0) > (e.photos?.length || 0)) {
+    const photos = [];
+    for (const [i, url] of live.photos.entries()) {
+      const saved = await savePicture(String(i + 1), LIVE + url, `media/coverage/${e.id}`);
+      if (saved) photos.push(saved);
+    }
+    e.photos = photos;
+  }
+}
 for (const e of data.events) {
   if (source === 'seed' || !e.sourceUrl) continue;
   if (/^https:\/\/(www\.|m\.)?facebook\.com\/share\/(v|r)\//.test(e.sourceUrl)) {
     try {
       const response = await fetch(e.sourceUrl, { redirect: 'manual', headers: { 'User-Agent': 'Mozilla/5.0' } });
-      const target = new URL(response.headers.get('location') || '', e.sourceUrl);
-      if (/^(www\.)?facebook\.com$/.test(target.hostname) && /^\/(reel|watch|[^/]+\/videos)/.test(target.pathname)) e.videoUrl = facebookVideoURL(target);
+      let target = new URL(response.headers.get('location') || e.sourceUrl, e.sourceUrl);
+      if (!isVideoAddress(target)) target = new URL((await facebookPage(e.sourceUrl)).url || e.sourceUrl, e.sourceUrl);
+      if (isVideoAddress(target)) e.videoUrl = facebookVideoURL(target);
+      else coverageNotice(`Video link of ${e.id} did not lead to a video (${target.hostname}${target.pathname}).`);
     } catch (error) {
-      warn(`Video link of ${e.id} could not be resolved (${error.message}).`);
+      coverageNotice(`Video link of ${e.id} could not be resolved (${error.message}).`);
     }
+    await keepLiveCoverage(e);
     continue;
   }
   if (!FB_POST.test(e.sourceUrl)) continue;
@@ -221,8 +247,9 @@ for (const e of data.events) {
       try {
         found = await fetchPostMedia(facebook, `${graphPrefix}_${number}`);
       } catch (error) {
-        warn(`Coverage post of ${e.id} could not be read from Facebook (${error.message}).`);
+        coverageNotice(`Coverage post of ${e.id} (${graphPrefix}_${number}) could not be read from Facebook: ${error.message}`);
       }
+    if (!number) coverageNotice(`Coverage post of ${e.id} has no post number Facebook would show.`);
     if (!found.photos.length && !found.video) {
       if (!preview && number) preview = (await facebookPage(e.sourceUrl)).image;
       if (/^https:\/\//.test(preview)) found.photos = [preview];
@@ -230,7 +257,7 @@ for (const e of data.events) {
     if (found.video)
       try {
         const target = new URL(found.video);
-        if (/^\/(reel|watch|[^/]+\/videos)/.test(target.pathname)) e.videoUrl = facebookVideoURL(target);
+        if (isVideoAddress(target)) e.videoUrl = facebookVideoURL(target);
       } catch {}
     const photos = [];
     for (const [i, url] of found.photos.entries()) {
@@ -238,9 +265,11 @@ for (const e of data.events) {
       if (saved) photos.push(saved);
     }
     e.photos = photos;
+    if (photos.length < 2) await keepLiveCoverage(e);
     console.log(`Coverage of ${e.id}: ${photos.length} photo(s)${e.videoUrl ? ' and a video' : ''}.`);
   } catch (error) {
-    warn(`Coverage of ${e.id} could not be read (${error.message}).`);
+    coverageNotice(`Coverage of ${e.id} could not be read (${error.message}).`);
+    await keepLiveCoverage(e);
   }
 }
 
