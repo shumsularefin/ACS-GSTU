@@ -28,7 +28,7 @@ import {
   updateDoc,
   Timestamp,
 } from 'firebase/firestore';
-import { normalizeMembershipID, currentCategory } from '../lib/content-model.js';
+import { normalizeMembershipID, currentCategory, legacyCategories } from '../lib/content-model.js';
 import { stripMeta, contentFromLegacy, documentsFromContent } from '../lib/content-store.js';
 import { membershipLookupID, publicCertificate } from '../lib/certificate-model.js';
 
@@ -47,6 +47,10 @@ export class ConflictError extends Error {
 // Form links are left out when empty, so events and membership still save under security rules
 // published before form links existed.
 const LINK_FIELDS = ['registrationFormId', 'surveyFormId', 'applicationFormId', 'renewalFormId', 'hideVideo', 'hidePhotos'];
+// Rules published before the annual report categories accept only the earlier category names, so an
+// event the rules refuse is saved once more under the matching earlier name. Everything shows and
+// reports it under the new category, and the next save after the new rules are deployed stores that.
+const EARLIER_NAME = Object.fromEntries(Object.entries(legacyCategories).map(([earlier, now]) => [now, earlier]));
 // Filled in by the build only; never written to the database.
 const BUILD_FIELDS = ['videoUrl', 'photos'];
 const withoutEmptyLinks = (data) =>
@@ -224,13 +228,18 @@ export function createCloud({ db, auth }) {
     },
 
     saveEvent(event, baseRevision) {
-      return saveDocument(doc(db, 'events', event.id), {
-        section: `Event “${event.title}”`,
-        action: baseRevision ? 'event.update' : 'event.create',
-        target: event.id,
-        detail: `${event.title} · ${event.date}`,
-        baseRevision,
-        data: (snap) => ({ ...withoutEmptyLinks(event), createdBy: snap.exists() ? snap.data().createdBy : uid() }),
+      const save = (e) =>
+        saveDocument(doc(db, 'events', e.id), {
+          section: `Event “${e.title}”`,
+          action: baseRevision ? 'event.update' : 'event.create',
+          target: e.id,
+          detail: `${e.title} · ${e.date}`,
+          baseRevision,
+          data: (snap) => ({ ...withoutEmptyLinks(e), createdBy: snap.exists() ? snap.data().createdBy : uid() }),
+        });
+      return save(event).catch((error) => {
+        if (error.code !== 'permission-denied' || !EARLIER_NAME[event.category]) throw error;
+        return save({ ...event, category: EARLIER_NAME[event.category] });
       });
     },
     deleteEvent(event) {
