@@ -87,6 +87,36 @@ test('a multi-day event with open registration and no registration link is promo
   await visitor.close();
 });
 
+test('an annual report collects the fiscal year events by ACS section and downloads as a PDF', async () => {
+  await owner.goto('/admin.html#reports');
+  await expect(owner.getByRole('heading', { name: 'Create the report for a fiscal year' })).toBeVisible();
+  await owner.locator('input[name="fiscalYear"][value="2025"]').check();
+  // 1 May 2024 – 31 May 2025: the four seed events, three of them held in May 2024.
+  const items = owner.locator('.ed-report-events li');
+  await expect(items).toHaveCount(4);
+  await expect(owner.locator('.ed-report-warn')).toHaveCount(3);
+  await expect(owner.locator('.ed-report-service strong')).toHaveText('2');
+  await expect(owner.locator('.ed-report-green-chemistry strong')).toHaveText('1');
+  const webinar = items.filter({ hasText: 'Membership Outreach Offline Webinar' });
+  await webinar.locator('[data-include]').uncheck();
+  await expect(owner.locator('.ed-report-service strong')).toHaveText('1');
+  await items.filter({ hasText: 'BSMRSTU' }).locator('[data-green]').check();
+  await expect(owner.locator('.ed-report-green-chemistry strong')).toHaveText('2');
+  await expect(owner.locator('[data-total]')).toHaveText('3 of 4 included');
+  const download = owner.waitForEvent('download');
+  await owner.getByRole('button', { name: 'Download PDF report' }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe('ACS-GSTU-Annual-Report-2024-2025.pdf');
+  expect(
+    readFileSync(await file.path())
+      .subarray(0, 5)
+      .toString(),
+  ).toBe('%PDF-');
+  // Choices are remembered for the report.
+  await owner.reload();
+  await expect(owner.locator('[data-total]')).toHaveText('3 of 4 included');
+});
+
 test('Publish all publishes what is valid and opens the section that needs fixing', async () => {
   await owner.goto('/admin.html#events/science-fair-2027');
   await owner.locator('form.ed-form [name="location"]').fill('GSTU Auditorium');
@@ -331,6 +361,7 @@ test('the dashboard and public pages fit a phone screen', async ({ browser }) =>
     '#overview',
     '#news',
     '#events/science-fair-2027',
+    '#reports',
     `#forms/${formId}`,
     `#forms/${formId}/responses`,
     '#team/2026',

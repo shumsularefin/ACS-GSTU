@@ -14,7 +14,7 @@ Remove the redundant recent-work/activity section from Home because the Events p
 
 ## Events
 
-Provide categories such as Outreach, Development, Sustainability and Community at the top. Place year navigation below the event grid, using previous/next and year links. Display events as square image cards with title and date on hover, with accessible equivalents for touch and keyboard users. Cards open a dedicated event detail page. Category changes must not cause screen flashing, page reloads or unstable animations. Preserve event links and show sensible empty states.
+Provide the four ACS annual report categories at the top: Service, Professional Development, Chapter Development and Green Chemistry (events saved with the earlier Outreach, Development, Community and Sustainability categories map to them). Place year navigation below the event grid, using previous/next and year links. Display events as square image cards with title and date on hover, with accessible equivalents for touch and keyboard users. Cards open a dedicated event detail page. Category changes must not cause screen flashing, page reloads or unstable animations. Preserve event links and show sensible empty states.
 
 ## Team and annual rosters
 
@@ -41,6 +41,10 @@ Restore the original participant certificate with its blue ACS header and pointe
 Use the supplied pointed verification-ribbon concept containing the status heading, real QR code, scan instruction, issue date and unique credential ID. Avoid the rejected cartoon-style seal and unnecessary border around the QR itself. Preview certificates must be clearly marked SAMPLE/not issued. Every issued certificate has a unique stable ID and its own QR-linked verification URL. A QR is not proof unless the corresponding record was issued and remains valid.
 
 Rename the public entry point Certificate Center. Members can select an event and enter their ACS membership ID to retrieve issued certificates, or verify with a credential ID. Download the verified certificate as a PDF from the website. Preserve working older credential links when compatible with the new system. Prevent public participant-directory listing, allow authorized revocation, and show revoked/not-found states clearly. Provide a clearly labeled final Save and issue certificates action, recovery backups and shareable credential links. Repeated submissions must not duplicate or overwrite conflicting issued IDs.
+
+## Annual reports
+
+Add an Annual reports section to the dashboard for every editor role. The ACS fiscal year runs from 1 May of the previous year to 31 May, the submission deadline (2025–2026 covers May 2025 through May 2026). The editor selects a fiscal year; the dashboard collects the published events whose start date falls in it, groups them by the four report categories, and downloads a PDF modelled on the ACS Student Chapters submission (chapter information, officers and faculty advisors, an activity summary, then each section's events with title, date, location, category and description). Editors can leave events out, use a different section for the report only, and also list events under Green Chemistry. An Excel copy of the event list is available for the ACS portal.
 
 ## Hosting, collaboration and handover
 

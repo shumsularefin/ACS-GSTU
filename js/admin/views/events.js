@@ -34,7 +34,7 @@ export const formFromEvent = (e) => {
   const v = eventFormValues(e);
   return pick({ ...v, timed: !!v.startTime });
 };
-const blank = () => pick({ category: 'outreach', registrationStatus: 'unpublished', date: '', timed: false, showVideo: true, showPhotos: true });
+const blank = () => pick({ category: 'service', registrationStatus: 'unpublished', date: '', timed: false, showVideo: true, showPhotos: true });
 const toEvent = (v) => normalizeEvent({ ...v, startTime: v.timed ? v.startTime : '', endTime: v.timed ? v.endTime : '' });
 
 function badge(e, forms) {

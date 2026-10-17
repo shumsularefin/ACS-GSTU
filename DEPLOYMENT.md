@@ -43,8 +43,8 @@ The super-admin manages access in **Manage editors & activity**. Enter a Google 
 | Role | Can do |
 | --- | --- |
 | Super-admin | Everything: content, committees and rosters, all certificates, revocation, Certificate Center list, editors, activity log, backups |
-| Chapter administrator | Events (any), homepage images, membership information, certificates except executive recognition |
-| Outreach editor | Homepage images, membership information, add events and edit their own, participant certificates |
+| Chapter administrator | Events (any), annual reports, homepage images, membership information, certificates except executive recognition |
+| Outreach editor | Homepage images, membership information, add events and edit their own, annual reports, participant certificates |
 
 `muhammadshamsularefin01@gmail.com` is the permanent super-admin and cannot be changed or removed. Only Google sign-in is accepted; the rules check this on the server.
 

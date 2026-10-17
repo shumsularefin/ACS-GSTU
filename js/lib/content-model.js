@@ -2,13 +2,29 @@
 // pages and the Chapter Editor. Everything here runs in both Node and the browser.
 import { formState } from './form-model.js';
 
+// Event categories follow the sections of the ACS student chapter annual report.
 export const categories = {
   all: 'All events',
-  outreach: 'Outreach',
-  development: 'Development',
-  sustainability: 'Sustainability',
-  community: 'Community',
+  service: 'Service',
+  'professional-development': 'Professional Development',
+  'chapter-development': 'Chapter Development',
+  'green-chemistry': 'Green Chemistry',
 };
+// Categories used before the website followed the annual report sections.
+export const legacyCategories = {
+  outreach: 'service',
+  development: 'professional-development',
+  community: 'chapter-development',
+  sustainability: 'green-chemistry',
+};
+/** Category key for stored, typed or legacy values ("Professional Development", "outreach" …). */
+export function currentCategory(value) {
+  const key = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, '-');
+  return legacyCategories[key] || key;
+}
 
 export const TIMEZONE = 'Asia/Dhaka';
 export const TIMEZONE_OFFSET = '+06:00';
@@ -79,7 +95,7 @@ export function normalizeEvent(raw) {
     id: text(raw.id, 80, 'Event ID'),
     title: text(raw.title, 200, 'Title'),
     date: text(raw.date, 10, 'Start date'),
-    category: text(raw.category, 30).toLowerCase(),
+    category: currentCategory(text(raw.category, 40)),
     image: safeURL(raw.image, true),
     description: text(raw.description, 5000, 'Description'),
     location: text(raw.location, 300, 'Location'),
@@ -105,7 +121,8 @@ export function normalizeEvent(raw) {
   if (!e.title) throw Error('Add an event title.');
   if (!validDate(e.date)) throw Error('Choose a valid start date.');
   if (!e.description) throw Error('Add a short event description.');
-  if (!Object.hasOwn(categories, e.category) || e.category === 'all') throw Error('Choose an event category.');
+  if (!Object.hasOwn(categories, e.category) || e.category === 'all')
+    throw Error('Choose an event category: Service, Professional Development, Chapter Development or Green Chemistry.');
   if (!['unpublished', 'open', 'closed'].includes(e.registrationStatus)) throw Error('Choose a registration status.');
 
   const endDate = text(raw.endDate, 10);

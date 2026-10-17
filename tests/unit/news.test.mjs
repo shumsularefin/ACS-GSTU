@@ -100,7 +100,7 @@ test('YouTube and Facebook coverage videos play on the event page; other links s
   assert.match(videoEmbedURL('https://www.facebook.com/reel/987654321'), /plugins\/video\.php/);
   assert.equal(videoEmbedURL('https://www.facebook.com/acs.gstu/posts/1'), '');
   assert.equal(videoEmbedURL('https://example.com/watch?v=dQw4w9WgXcQ'), '');
-  const base = { id: 'fair', title: 'Fair', date: '2026-01-02', category: 'outreach', description: 'Fun.' };
+  const base = { id: 'fair', title: 'Fair', date: '2026-01-02', category: 'service', description: 'Fun.' };
   const withVideo = normalizeEvent({ ...base, sourceUrl: 'https://youtu.be/dQw4w9WgXcQ' });
   assert.ok(
     renderEvent({ events: [withVideo], forms: [] }, 'fair').includes('<iframe src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"'),
@@ -149,7 +149,7 @@ test('coverage posts bring their photos and video; editors can hide either', asy
     id: 'fair',
     title: 'Fair',
     date: '2026-01-02',
-    category: 'outreach',
+    category: 'service',
     description: 'Fun.',
     sourceUrl: 'https://www.facebook.com/acs.gstu/posts/1',
   };
@@ -161,7 +161,7 @@ test('coverage posts bring their photos and video; editors can hide either', asy
   assert.equal(page.match(/class="event-photo"/g).length, 11, 'every photo is in the album');
   assert.equal(page.match(/ hidden><\/a>/g).length, 3, 'the grid shows eight');
   assert.ok(page.includes('<span class="event-photo-more">+3</span>'));
-  assert.ok(!page.includes("<img src=\"media/coverage/fair/9.jpg"), "photos beyond the grid load only in the album");
+  assert.ok(!page.includes('<img src="media/coverage/fair/9.jpg'), 'photos beyond the grid load only in the album');
   for (const [tag] of page.matchAll(/<img\b[^>]+>/g)) assert.ok(tag.includes('width=') && tag.includes('height='), tag);
   const hidden = normalizeEvent({ ...base, photos, showPhotos: false });
   assert.equal(hidden.hidePhotos, true);

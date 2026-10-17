@@ -28,7 +28,7 @@ import {
   updateDoc,
   Timestamp,
 } from 'firebase/firestore';
-import { normalizeMembershipID } from '../lib/content-model.js';
+import { normalizeMembershipID, currentCategory } from '../lib/content-model.js';
 import { stripMeta, contentFromLegacy, documentsFromContent } from '../lib/content-store.js';
 import { membershipLookupID, publicCertificate } from '../lib/certificate-model.js';
 
@@ -181,7 +181,8 @@ export function createCloud({ db, auth }) {
         layout: meta.exists() ? 'split' : 'empty',
         revision: meta.exists() ? meta.data().revision : 0,
         events: eventDocs.docs.map((d) => ({
-          value: stripMeta(d.data()),
+          // Events saved before the annual report categories show (and save) with the new category.
+          value: { ...stripMeta(d.data()), category: currentCategory(d.data().category) },
           revision: d.data().revision || 0,
           createdBy: d.data().createdBy,
         })),
@@ -378,7 +379,8 @@ export function createCloud({ db, auth }) {
         `Upgraded storage: ${content.events.length} events, ${Object.keys(docs.team).length} team records`,
       );
       const stamped = { revision: 1, ...stamp(auditId) };
-      for (const e of Object.values(docs.events)) batch.set(doc(db, 'events', e.id), { ...withoutEmptyLinks(e), createdBy: uid(), ...stamped });
+      for (const e of Object.values(docs.events))
+        batch.set(doc(db, 'events', e.id), { ...withoutEmptyLinks(e), createdBy: uid(), ...stamped });
       batch.set(doc(db, 'pages', 'homepage'), { ...docs.homepage, ...stamped });
       batch.set(doc(db, 'pages', 'membership'), { ...docs.membership, ...stamped });
       for (const [year, value] of Object.entries(docs.team)) batch.set(doc(db, 'team', year), { ...value, ...stamped });

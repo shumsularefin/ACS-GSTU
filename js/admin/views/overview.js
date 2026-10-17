@@ -3,6 +3,7 @@ import { h, busy, when } from '../ui.js';
 import { roleInfo } from '../permissions.js';
 import { eventOpen, eventPast } from '../../lib/content-model.js';
 import { eventDateLabel } from '../../lib/content-render.js';
+import { currentReportYear, fiscalYear } from '../../lib/annual-report.js';
 
 export const overviewView = {
   id: 'overview',
@@ -17,6 +18,11 @@ export const overviewView = {
     const names = drafts.names();
     const actions = [
       perms.events && ['events/new', 'Add an event', 'Dates, registration link and photo.'],
+      perms.reports && [
+        'reports',
+        'Create the annual report',
+        `The ${fiscalYear(currentReportYear()).label} report is due 31 May ${currentReportYear()}.`,
+      ],
       perms.homepage && ['homepage', 'Change homepage images', 'Upload or reorder the hero slideshow.'],
       perms.certificates && ['certificates', 'Issue certificates', 'One recipient or a participant spreadsheet.'],
       perms.team && ['team', 'Update team & rosters', 'Committees, photos and member imports.'],

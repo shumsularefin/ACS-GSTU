@@ -380,3 +380,36 @@
 .ed-news strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ed-news small { color: var(--ed-muted); }
 @media (max-width: 620px) { .ed-news li { grid-template-columns: 52px 1fr; } .ed-news img, .ed-news-blank { width: 52px; height: 52px; } .ed-news .ed-tag { display: none; } }
+
+/* Annual reports */
+.ed-step-num { display: inline-grid; place-items: center; width: 26px; height: 26px; margin-right: 10px; border-radius: 50%; background: var(--ed-blue); color: #fff; font-size: 13px; font-weight: 600; vertical-align: 2px; }
+.ed-report-intro p:last-child { margin-bottom: 0; }
+.ed-report-years .ed-choice span:last-child { margin-top: 4px; }
+.ed-report-period { margin-top: 16px; }
+.ed-report-period summary { cursor: pointer; font-weight: 500; color: var(--ed-blue); font-size: 14px; }
+.ed-report-period[open] summary { margin-bottom: 8px; }
+.ed-report-counts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+.ed-report-count { display: grid; gap: 2px; padding: 12px 14px; border-radius: 12px; background: var(--ed-bg); border-top: 4px solid var(--ed-blue); }
+.ed-report-count strong { font-size: 24px; line-height: 1.1; color: var(--ed-blue); }
+.ed-report-count span { font-size: 13px; color: var(--ed-muted); }
+.ed-report-professional-development { border-top-color: #056bf3; }
+.ed-report-chapter-development { border-top-color: var(--ed-aqua); }
+.ed-report-green-chemistry { border-top-color: var(--ed-success); }
+.ed-report-events { list-style: none; margin: 8px 0 14px; padding: 0; display: grid; }
+.ed-report-events li { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(200px, 260px); gap: 14px; align-items: start; padding: 14px 4px; border-bottom: 1px solid var(--ed-line); }
+.ed-report-events li:first-child { border-top: 1px solid var(--ed-line); }
+.ed-report-events li.is-out .ed-report-event { opacity: 0.5; }
+.ed-report-events li.is-out .ed-report-event strong { text-decoration: line-through; }
+.ed-report-include { margin: 2px 0 0; }
+.ed-report-event { display: grid; gap: 2px; min-width: 0; }
+.ed-report-event small { color: var(--ed-muted); }
+.ed-report-event .ed-report-warn { color: var(--ed-draft); }
+.ed-report-controls { display: grid; gap: 6px; }
+.ed-report-controls .ed-field { margin: 0; }
+.ed-report-controls .ed-check { font-size: 13px; }
+.ed-report-officers .ed-details { margin-top: 4px; }
+@media (max-width: 760px) {
+  .ed-report-counts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ed-report-events li { grid-template-columns: auto minmax(0, 1fr); }
+  .ed-report-controls { grid-column: 2; }
+}

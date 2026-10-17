@@ -503,6 +503,21 @@ export async function certificateSVG(c, { preview = false } = {}) {
   return AWARDS[c.type] ? awardSVG(c, { preview }) : participationSVG(c, { preview });
 }
 
+/** pdf-lib, loaded on first use (it is large and only needed for downloads). */
+export function loadPdfLib() {
+  return once('pdf-lib', async () => {
+    if (!window.PDFLib)
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'js/vendor/pdf-lib.min.js';
+        s.onload = resolve;
+        s.onerror = () => reject(Error('The PDF tools could not load. Check your connection and try again.'));
+        document.head.append(s);
+      });
+    return window.PDFLib;
+  });
+}
+
 export async function downloadCertificate(c, { preview = false } = {}) {
   const svg = await certificateSVG(c, { preview });
   const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
@@ -515,14 +530,7 @@ export async function downloadCertificate(c, { preview = false } = {}) {
     canvas.width = WIDTH * 2;
     canvas.height = HEIGHT * 2;
     canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-    if (!window.PDFLib)
-      await new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = 'js/vendor/pdf-lib.min.js';
-        s.onload = resolve;
-        s.onerror = reject;
-        document.head.append(s);
-      });
+    const PDFLib = await loadPdfLib();
     const pdf = await PDFLib.PDFDocument.create();
     const page = pdf.addPage([841.89, 595.28]);
     const image = await pdf.embedPng(canvas.toDataURL('image/png'));

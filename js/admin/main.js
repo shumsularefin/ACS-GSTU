@@ -18,10 +18,12 @@ import { editorsView } from './views/editors.js';
 import { backupsView } from './views/backups.js';
 import { accountView } from './views/account.js';
 import { upgradeView } from './views/upgrade.js';
+import { reportsView } from './views/reports.js';
 
 const views = [
   overviewView,
   eventsView,
+  reportsView,
   formsView,
   newsView,
   homepageView,

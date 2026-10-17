@@ -161,7 +161,7 @@ test('linked website forms drive the register, feedback and join buttons', async
     { id: 'join', title: 'Member registration', kind: 'member', status: 'open', opensAt: '', closesAt: '' },
     { id: 'later', title: 'Later', kind: 'event', status: 'open', opensAt: '2026-12-01T00:00:00.000Z', closesAt: '' },
   ];
-  const base = { id: 'workshop', title: 'Workshop', date: '2026-11-10', category: 'development', description: 'Hands-on.' };
+  const base = { id: 'workshop', title: 'Workshop', date: '2026-11-10', category: 'professional-development', description: 'Hands-on.' };
   // Registration is optional: no form and no status means no registration block at all.
   const plain = normalizeEvent(base);
   assert.equal(plain.registrationFormId, '');

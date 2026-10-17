@@ -21,6 +21,17 @@ If someone else published the same section while you were editing, you are asked
 - **Preview** shows the event page before publishing.
 - Outreach editors can edit the events they added. Only a super-admin can delete events.
 - Super-admins can import many events from a spreadsheet: each becomes a draft to review and publish.
+- **Categories** match the sections of the ACS annual report: **Service**, **Professional Development**, **Chapter Development** and **Green Chemistry**. Events saved before this change moved to the matching category (Outreach → Service, Development → Professional Development, Community → Chapter Development, Sustainability → Green Chemistry). Check older events and change any that belong elsewhere.
+
+## Annual reports
+
+The ACS student chapter report is due on **31 May** each year and covers the fiscal year from 1 May of the year before to 31 May. Every editor can create it from the published events:
+
+1. **Annual reports → Fiscal year:** choose the year (the current one is selected, with the days left to the deadline). Events are included by their start date. **Adjust the reporting period** only if ACS asks for different dates.
+2. **Events in this report:** every event in the period, grouped into the four sections. Untick an event to leave it out, choose another section for this report only, or tick **Also list under Green Chemistry** to show it in both places, as the ACS form allows. Events held in May also fall in the previous year's period; leave them out if they were already reported.
+3. **Report details:** choose the executive committee whose officers are listed (faculty advisors are always included) and who prepared it, then **Download PDF report**. **Download Excel** gives the same events in a sheet for copying into the ACS reporting portal.
+
+Your choices for each year are remembered in this browser. To change an event's title, date or description, edit the event and publish it; the report picks up the change.
 
 ## Homepage images and membership
 
@@ -43,7 +54,7 @@ If someone else published the same section while you were editing, you are asked
 **Issue certificates** walks you through four steps:
 
 1. **Category:** participation, champion, first or second runner-up, achievement, formal recognition (instructor, teacher, guest, delegate, institution, organization), or executive service. Your role decides which are available.
-2. **Details:** only the fields that apply. Event certificates ask for the event. **Executive service asks for the fiscal year** (and optionally the office) and needs no event or membership ID.
+2. **Details:** only the fields that apply. Event certificates ask for the event. **Executive service asks for the fiscal year** (and optionally the office) and needs no event.
 3. **Recipients:** one person, or a spreadsheet with Name and optional Membership ID, Designation and Achievement (download the template).
 4. **Review & issue:** check the table and the preview, tick the confirmation, then **Issue**.
 

@@ -4,17 +4,17 @@ export const roleInfo = {
   'super-admin': {
     label: 'Super-admin',
     summary:
-      'Full access: website content, forms and responses, executive committees and rosters, all certificates, editor access and the activity log.',
+      'Full access: website content, forms and responses, annual reports, executive committees and rosters, all certificates, editor access and the activity log.',
   },
   administrator: {
     label: 'Chapter administrator',
     summary:
-      'Events, forms and all their responses, homepage images, membership information, and certificates except executive recognition.',
+      'Events, forms and all their responses, annual reports, homepage images, membership information, and certificates except executive recognition.',
   },
   outreach: {
     label: 'Outreach editor',
     summary:
-      'Homepage images, membership information, adding events and forms (and editing your own, with their responses), and participant certificates.',
+      'Homepage images, membership information, adding events and forms (and editing your own, with their responses), annual reports, and participant certificates.',
   },
 };
 
@@ -33,6 +33,7 @@ export function permissions(role) {
     import: superAdmin,
     news: editor,
     forms: editor,
+    reports: editor,
     manageAnyForm: superAdmin || role === 'administrator',
     deleteForms: superAdmin,
     certificates: editor,

@@ -79,7 +79,7 @@ export const templates = {
       'Science Fair 2026',
       '2026-11-02',
       '2026-11-03',
-      'outreach',
+      'Service',
       'A two-day science fair.',
       'GSTU',
       'open',

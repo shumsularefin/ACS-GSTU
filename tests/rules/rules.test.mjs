@@ -60,7 +60,7 @@ const seed = () =>
   );
 
 const event = (id, extra = {}) =>
-  normalizeEvent({ id, title: `Event ${id}`, date: '2026-11-02', category: 'outreach', description: 'A test event.', ...extra });
+  normalizeEvent({ id, title: `Event ${id}`, date: '2026-11-02', category: 'service', description: 'A test event.', ...extra });
 
 before(async () => {
   env = await initializeTestEnvironment({ projectId: 'demo-acs-rules', firestore: { rules: readFileSync('firestore.rules', 'utf8') } });

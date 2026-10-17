@@ -12,7 +12,7 @@ import {
   planImport,
   publicContent,
 } from '../../js/lib/content-model.js';
-import { renderEvent, renderMembership, renderOpenEvent, renderTeam, eventDateLabel } from '../../js/lib/content-render.js';
+import { renderEvent, renderEvents, renderMembership, renderOpenEvent, renderTeam, eventDateLabel } from '../../js/lib/content-render.js';
 import { contentFromDocuments, contentFromLegacy, documentsFromContent } from '../../js/lib/content-store.js';
 
 const seed = (name) => JSON.parse(fs.readFileSync(`data/seed/${name}.json`, 'utf8'));
@@ -21,12 +21,24 @@ const event = normalizeEvent({
   id: 'workshop',
   title: 'Workshop',
   date: '2026-10-15',
-  category: 'development',
+  category: 'professional-development',
   description: 'A workshop.',
   startsAt: '2026-10-15T10:00:00+06:00',
   endsAt: '2026-10-15T12:00:00+06:00',
   registrationStatus: 'open',
   registrationUrl: 'https://example.org/register',
+});
+
+test('events: categories follow the annual report; older categories and typed labels map to them', () => {
+  const as = (category) => normalizeEvent({ ...event, category }).category;
+  assert.equal(as('outreach'), 'service');
+  assert.equal(as('development'), 'professional-development');
+  assert.equal(as('community'), 'chapter-development');
+  assert.equal(as('sustainability'), 'green-chemistry');
+  assert.equal(as('Professional Development'), 'professional-development');
+  assert.equal(as('Green Chemistry'), 'green-chemistry');
+  assert.throws(() => as('social'), /category/);
+  assert.match(renderEvents(data, { year: 'all', type: 'outreach' }), /data-type="service"/, 'old links open the new category');
 });
 
 test('events: invalid values and unsafe links are rejected', () => {

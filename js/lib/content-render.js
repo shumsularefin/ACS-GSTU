@@ -1,6 +1,7 @@
 // HTML renderers shared by the static build and the browser (fresh content after a publish).
 import {
   categories,
+  currentCategory,
   escapeHTML as h,
   eventOpen,
   eventPast,
@@ -108,7 +109,8 @@ export function eventYears(data, extra) {
 export function renderEvents(data, options = {}) {
   // 'all' lists every year's events together, newest first.
   const year = options.year === 'all' ? 'all' : Number(/^20\d{2}$/.test(String(options.year)) ? options.year : latestYear(data));
-  const type = Object.hasOwn(categories, options.type) ? options.type : 'all';
+  // Old links (?type=outreach …) open the matching annual report category.
+  const type = Object.hasOwn(categories, currentCategory(options.type)) ? currentCategory(options.type) : 'all';
   const selected = data.events
     .filter((e) => (year === 'all' || Number(e.date.slice(0, 4)) === year) && (type === 'all' || e.category === type))
     .sort((a, b) => b.date.localeCompare(a.date));
