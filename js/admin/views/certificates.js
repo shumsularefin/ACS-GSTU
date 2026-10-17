@@ -120,6 +120,16 @@ function renderIssue(root, app) {
   const executive = w.type === 'executive';
   if (w.step === 2) {
     const events = app.data.events.map((e) => e.value).sort((a, b) => b.date.localeCompare(a.date));
+    // Group events by year so the list stays short as the years add up.
+    const years = [...new Set(events.map((e) => e.date.slice(0, 4)).filter(Boolean))];
+    const picked = events.find((e) => e.id === w.eventId);
+    const year = picked ? picked.date.slice(0, 4) : (w.eventYear ?? years[0] ?? '');
+    const eventOptions = (y) =>
+      `<option value="">Another event (type it below)</option>` +
+      events
+        .filter((e) => !y || e.date.startsWith(y))
+        .map((e) => `<option value="${h(e.id)}"${w.eventId === e.id ? ' selected' : ''}>${h(e.title)} · ${h(dateLabel(e.date))}</option>`)
+        .join('');
     step.innerHTML = `<h3>${h(LABEL[w.type])} details</h3><form class="ed-form" novalidate><div class="ed-grid">
       ${
         executive
@@ -137,12 +147,10 @@ function renderIssue(root, app) {
               attrs: 'maxlength="100" placeholder="e.g. General Secretary"',
               hint: 'Use this when everyone in the batch held the same office; otherwise put each office in the Designation column.',
             })
-          : `<label class="ed-field ed-wide"><span class="ed-label">Event</span><select name="eventId"><option value="">Another event (type it below)</option>${events
-              .map(
-                (e) =>
-                  `<option value="${h(e.id)}"${w.eventId === e.id ? ' selected' : ''}>${h(e.title)} · ${h(dateLabel(e.date))}</option>`,
-              )
+          : `<label class="ed-field"><span class="ed-label">Year</span><select name="eventYear" data-event-year><option value="">All years</option>${years
+              .map((y) => `<option value="${y}"${year === y ? ' selected' : ''}>${y}</option>`)
               .join('')}</select></label>
+            <label class="ed-field"><span class="ed-label">Event</span><select name="eventId">${eventOptions(year)}</select></label>
             <div class="ed-grid ed-wide" data-custom-event>${field({ label: 'Event title', name: 'eventTitle', value: w.eventTitle, attrs: 'maxlength="250"' })}${field({ label: 'Event date', name: 'eventDate', type: 'date', value: w.eventDate })}</div>`
       }
       ${field({ label: 'Issue date', name: 'dateIssued', type: 'date', value: w.dateIssued, attrs: 'required' })}
@@ -155,7 +163,13 @@ function renderIssue(root, app) {
       if (custom) custom.hidden = !!form.elements.eventId.value;
     };
     sync();
-    form.addEventListener('change', sync);
+    form.addEventListener('change', (e) => {
+      if (e.target.name === 'eventYear') {
+        w.eventId = form.elements.eventId.value;
+        form.elements.eventId.innerHTML = eventOptions(e.target.value);
+      }
+      sync();
+    });
     $('[data-back]', step).addEventListener('click', () => go(1));
     $('[data-next]', step).addEventListener('click', () => {
       const v = Object.fromEntries(new FormData(form));
