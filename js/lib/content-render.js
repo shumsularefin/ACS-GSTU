@@ -169,9 +169,12 @@ function eventPhotos(e) {
   const more = e.photos.length - GRID_PHOTOS;
   const tiles = e.photos
     .map((src, i) => {
-      const hidden = i >= GRID_PHOTOS ? ' hidden' : '';
+      const alt = `${h(e.title)}: photo ${i + 1} of ${e.photos.length}`;
+      // Beyond the grid, only links: the full photos load one at a time in the album.
+      if (i >= GRID_PHOTOS) return `<a class="event-photo" href="${h(src)}" data-gallery-index="${i}" data-alt="${alt}" hidden></a>`;
+      const thumb = src.endsWith('.webp') ? src.replace(/\.webp$/, '-t.webp') : src;
       const badge = i === GRID_PHOTOS - 1 && more > 0 ? `<span class="event-photo-more">+${more}</span>` : '';
-      return `<a class="event-photo" href="${h(src)}" data-gallery-index="${i}"${hidden}><img src="${h(src)}" alt="${h(e.title)}: photo ${i + 1} of ${e.photos.length}" width="800" height="600" loading="lazy" decoding="async">${badge}</a>`;
+      return `<a class="event-photo" href="${h(src)}" data-gallery-index="${i}" data-alt="${alt}"><img src="${h(thumb)}" alt="${alt}" width="480" height="360" loading="lazy" decoding="async">${badge}</a>`;
     })
     .join('');
   return `<section class="event-photos" aria-label="Event photos" data-gallery><div class="event-photos-head"><h2>Event photos</h2><span>${e.photos.length} ${e.photos.length === 1 ? 'photo' : 'photos'}</span></div><div class="event-photo-grid">${tiles}</div></section>`;

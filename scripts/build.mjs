@@ -5,6 +5,7 @@
 //   seed       use data/seed/*.json only (tests and offline work)
 //   auto       try Firestore, fall back to the seed with a warning (default)
 // FIRESTORE_ORIGIN and FIREBASE_PROJECT point the build at the Firestore emulator for end-to-end tests.
+import sharp from 'sharp';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
@@ -111,6 +112,10 @@ for (const reference of references) {
 // unreachable, the News already on the live site is kept.
 const LIVE = 'https://acs-gstu.web.app/';
 const imageTypes = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+// Photos are re-encoded as WebP to keep hosting storage small: News cards get one 720px copy;
+// coverage photos get a 1600px copy for the album and a 480px thumbnail (<id>-t.webp) for the grid.
+// The same photo always produces the same bytes, so repeated builds add no new storage.
+const SIZES = { news: [[720, 72, '']], coverage: [[1600, 78, ''], [480, 62, '-t']] };
 async function savePicture(id, url, folder = 'media/news') {
   try {
     const response = await fetch(url);
@@ -118,8 +123,12 @@ async function savePicture(id, url, folder = 'media/news') {
     if (!response.ok || !ext) throw Error(`status ${response.status}`);
     const body = Buffer.from(await response.arrayBuffer());
     if (body.length > 8 * 1024 * 1024) throw Error('too large');
-    write(`${folder}/${id}.${ext}`, body);
-    return `${folder}/${id}.${ext}`;
+    for (const [width, quality, suffix] of SIZES[folder.startsWith('media/coverage') ? 'coverage' : 'news'])
+      write(
+        `${folder}/${id}${suffix}.webp`,
+        await sharp(body).rotate().resize({ width, withoutEnlargement: true }).webp({ quality, effort: 5 }).toBuffer(),
+      );
+    return `${folder}/${id}.webp`;
   } catch (error) {
     warn(`Photo ${folder}/${id} could not be saved (${error.message}).`);
     return '';
@@ -536,8 +545,20 @@ page('404.html', {
 
 // ------------------------------------------------------------------ assets and data
 
+// Original photos that have optimized copies (data/image-manifest.json) are not uploaded unless a
+// page, stylesheet or script names them directly: pages use the smaller copies, and hosting
+// storage stays small for years.
+const sourceText = ['src', 'css', 'js']
+  .flatMap((dir) => fs.readdirSync(dir, { recursive: true }).map((f) => path.join(dir, String(f))))
+  .filter((f) => /\.(html|css|js)$/.test(f) && fs.statSync(f).isFile())
+  .map((f) => fs.readFileSync(f, 'utf8'))
+  .join('\n');
+const replaced = new Set(Object.keys(images).filter((original) => !sourceText.includes(original)));
 for (const dir of ['images', 'ico', 'fonts'])
-  fs.cpSync(dir, path.join(publicRoot, dir), { recursive: true, filter: (f) => !path.basename(f).startsWith('.') });
+  fs.cpSync(dir, path.join(publicRoot, dir), {
+    recursive: true,
+    filter: (f) => !path.basename(f).startsWith('.') && !replaced.has(path.relative('.', f).split(path.sep).join('/')),
+  });
 fs.copyFileSync('google3d74b2f79116caad.html', path.join(publicRoot, 'google3d74b2f79116caad.html'));
 write(
   'site.webmanifest',

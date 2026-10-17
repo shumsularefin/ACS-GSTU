@@ -108,3 +108,5 @@ jobs:
         env:
           FIREBASE_HOSTING_UPLOAD_CONCURRENCY: 5
         run: npx firebase deploy --only hosting --project acs-gstu --non-interactive
+      - name: Keep only the newest releases
+        run: node scripts/hosting-retention.mjs

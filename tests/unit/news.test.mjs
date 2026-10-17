@@ -159,8 +159,9 @@ test('coverage posts bring their photos and video; editors can hide either', asy
   const page = renderEvent({ events: [e], forms: [] }, 'fair');
   assert.ok(page.includes('<h2>Event photos</h2>') && page.includes('11 photos'));
   assert.equal(page.match(/class="event-photo"/g).length, 11, 'every photo is in the album');
-  assert.equal(page.match(/data-gallery-index="\d+" hidden/g).length, 3, 'the grid shows eight');
+  assert.equal(page.match(/ hidden><\/a>/g).length, 3, 'the grid shows eight');
   assert.ok(page.includes('<span class="event-photo-more">+3</span>'));
+  assert.ok(!page.includes("<img src=\"media/coverage/fair/9.jpg"), "photos beyond the grid load only in the album");
   for (const [tag] of page.matchAll(/<img\b[^>]+>/g)) assert.ok(tag.includes('width=') && tag.includes('height='), tag);
   const hidden = normalizeEvent({ ...base, photos, showPhotos: false });
   assert.equal(hidden.hidePhotos, true);

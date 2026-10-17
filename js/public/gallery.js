@@ -47,7 +47,7 @@ export function setupGallery() {
     if (!dialog) build();
     photos = [...tile.closest('[data-gallery]').querySelectorAll('[data-gallery-index]')].map((a) => ({
       href: a.getAttribute('href'),
-      alt: a.querySelector('img')?.alt || '',
+      alt: a.dataset.alt || '',
     }));
     show(Number(tile.dataset.galleryIndex));
     dialog.showModal();
