@@ -27,10 +27,7 @@ const GROUPS = [
       ['organization', 'Organization', 'Partner organizations.'],
     ],
   ],
-  [
-    'Executive recognition',
-    [['executive', 'Executive service', 'Service as an executive member for a fiscal year. No event or membership ID needed.']],
-  ],
+  ['Executive recognition', [['executive', 'Executive service', 'Service as an executive member for a fiscal year. No event needed.']]],
 ];
 const LABEL = Object.fromEntries(GROUPS.flatMap(([, items]) => items.map(([k, l]) => [k, l])));
 const TABS = [
@@ -194,8 +191,8 @@ function renderIssue(root, app) {
       <div class="ed-segmented" role="radiogroup" aria-label="Recipients"><label><input type="radio" name="mode" value="single" ${w.mode === 'single' ? 'checked' : ''}> One recipient</label><label><input type="radio" name="mode" value="batch" ${w.mode === 'batch' ? 'checked' : ''}> A list from a spreadsheet</label></div>
       <form class="ed-form" novalidate data-single ${w.mode === 'single' ? '' : 'hidden'}><div class="ed-grid">
         ${field({ label: w.type === 'institution' || w.type === 'organization' ? 'Institution or organization name' : 'Recipient name', name: 'name', value: w.single.name || '', attrs: 'required maxlength="160"', wide: true })}
-        ${executive ? '' : field({ label: 'ACS membership ID', name: 'memID', value: w.single.memID || '', optional: true, attrs: 'maxlength="80" autocomplete="off"', hint: 'Lets the recipient find the certificate in the Certificate Center. Kept private.' })}
-        ${field({ label: executive ? 'Office held' : 'Designation or institution', name: 'designation', value: w.single.designation || (executive ? w.office : ''), optional: true, attrs: 'maxlength="160"' })}
+        ${field({ label: 'ACS membership ID', name: 'memID', value: w.single.memID || '', optional: true, attrs: 'maxlength="80" autocomplete="off"', hint: 'Lets the recipient find the certificate in the Certificate Center. Kept private.' })}
+        ${executive ? '' : field({ label: 'Designation or institution', name: 'designation', value: w.single.designation || '', optional: true, attrs: 'maxlength="160"' })}
       </div></form>
       <div data-batch ${w.mode === 'batch' ? '' : 'hidden'}>
         <p>Columns: <strong>Name</strong> (required), <strong>Membership ID</strong>, <strong>Designation</strong> and <strong>Achievement</strong> (all optional). Every row gets the ${h(LABEL[w.type].toLowerCase())} category and the details from the previous step.</p>
@@ -249,7 +246,7 @@ function renderIssue(root, app) {
   const withoutIds = w.records.filter((c) => !c.memID).length;
   step.innerHTML = `<h3>Review ${w.records.length} certificate${w.records.length === 1 ? '' : 's'}</h3>
     <ul class="ed-summary"><li><strong>${h(LABEL[w.type])}</strong> · ${h(w.records[0].event)}</li><li>Issued ${h(dateLabel(w.dateIssued))} · signed by the Advisor and Co-Advisor</li>${
-      withoutIds && !executive ? `<li>${withoutIds} without a membership ID: share their personal link after issuing.</li>` : ''
+      withoutIds ? `<li>${withoutIds} without a membership ID: share their personal link after issuing.</li>` : ''
     }</ul>
     <div class="ed-table-wrap"><table class="ed-table"><thead><tr><th>Recipient</th><th>Designation</th><th>Membership ID</th><th>Credential ID</th></tr></thead><tbody>${w.records
       .slice(0, 50)
